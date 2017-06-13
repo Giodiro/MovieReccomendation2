@@ -14,19 +14,19 @@ ifeq ($(UNAME), Linux)
 	CFLAGS=-std=c++14 -O3 -march=native -fopenmp -isystem ../lib/  $(WARNINGS)
 	LDFLAGS=
 else
-	CC=icpc
-	#CC=mpic++
-	CFLAGS=-Wall -std=c++14 -O3 -no-prec-div -fp-model precise -ipo -qopenmp -isystem lib/ -isystem ~/local/include
+	#CC=icpc
+	CC=mpic++
+	CFLAGS=-Wall -std=c++14 -O3 -no-prec-div -fp-model precise -ipo -qopenmp -isystem ../lib/ -isystem ~/local/include
 	LDFLAGS=
 endif
 
 ## Compile the parameter search (MPI_SGD)
-#EXECUTABLE=MPI_SGD
-#SOURCES=variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp mpi_main.cpp
+EXECUTABLE=MPI_SGD
+SOURCES=variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp mpi_main.cpp
 
 ## Compile the "normal" executable (SGD)
-EXECUTABLE=SGD
-SOURCES=variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp main.cpp
+#EXECUTABLE=SGD
+#SOURCES=variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp main.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
