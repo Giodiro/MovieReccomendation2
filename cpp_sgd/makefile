@@ -1,21 +1,16 @@
 UNAME := $(shell (lsb_release -ds 2>/dev/null || cat /etc/*release 2>/dev/null | head -n1 || uname -om) | cut -d' ' -f 1)
 
 ifeq ($(UNAME), Linux)
-	CC=g++
-	#CC=mpic++
-	# Compiler options
-	#CFLAGS=-std=c++14 -O3 -g3 -march=native -fopenmp -isystem lib/ \
-	#	   -pedantic -Wall -Wextra -Wcast-align -Wcast-qual -Wctor-dtor-privacy \
-	#	   -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations \
-	#	   -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls \
-	#	   -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wuseless-cast \
-	#	   -Wswitch-default -Wundef -Wno-unused
-	CFLAGS=-std=c++14 -O3 -march=native -fopenmp -isystem ../lib/ \
-		   -pedantic -Wall -Wextra -Wcast-align -Wcast-qual -Wctor-dtor-privacy \
-		   -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations \
-		   -Wmissing-include-dirs -Wnoexcept -Woverloaded-virtual -Wredundant-decls \
-		   -Wshadow -Wsign-promo -Wstrict-null-sentinel \
-		   -Wswitch-default -Wundef -Wno-unused
+	CC=g++      # Used for compiling SGD
+	#CC=mpic++  # Used for compiling MPI_SGD
+
+	WARNINGS=-Wall -Wextra -Wcast-align -Wcast-qual -Wctor-dtor-privacy \
+		     -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations \
+		     -Wmissing-include-dirs -Wnoexcept -Woverloaded-virtual -Wredundant-decls \
+		     -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wold-style-cast \
+		     -Wswitch-default -Wundef -Wno-unused -pedantic
+
+	CFLAGS=-std=c++14 -O3 -march=native -fopenmp -isystem ../lib/  $(WARNINGS)
 	LDFLAGS=-L../xgboost/lib -L../xgboost/dmlc-core -L../xgboost/rabit/lib -lxgboost -lrabit -ldmlc -lgomp
 else
 	CC=icpc
