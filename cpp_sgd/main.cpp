@@ -13,9 +13,6 @@
 
 #include <Eigen/Dense>
 
-// Include the xgboost API
-#include <xgboost/c_api.h>
-
 #include "sgd_types.h"
 #include "ioutil.h"
 #include "evaluation.h"
@@ -53,153 +50,10 @@ const static Settings DEFAULT_SETTINGS = {
 };
 
 
-// XGBoost functions
-void BuildXGBoostMatrix (std::vector< std::vector<dtype> > &predictors, DMatrixHandle *out);
-void RunXGBoost (std::vector< std::vector<dtype> > &trp, 
-    std::vector< std::vector<dtype> > &tsp, 
-    const MatrixD &train, 
-    const MatrixD &test,
-    const std::string submission_file,
-    const bool save_data,
-    const bool load_data);
-void xgboostClassifDriver(int num_threads, ulong rseed, std::string submission_file);
+void runAllClassif(int num_threads, ulong rseed, std::string submission_file);
 
 
-
-void BuildXGBoostMatrix (std::vector< std::vector<dtype> > &predictors, DMatrixHandle *out) 
-{
-    size_t ncol = predictors.size();
-    size_t nrow = predictors[0].size();
-    std::cout << "nrow: " << nrow << " ncol: " << ncol << "\n";
-    float *data = static_cast<float *>(malloc(nrow * ncol * sizeof(float)));
-    uint ti = 0;
-    for (uint i = 0; i < nrow; ++i) {
-        for (uint j = 0; j < ncol; ++j) {
-            data[ti] = predictors[j][i];
-            ti++;
-        }
-    }
-    XGDMatrixCreateFromMat(data, nrow, ncol, -1, out);
-    free(data);
-}
-
-
-void RunXGBoost (std::vector< std::vector<dtype> > &trp, 
-                 std::vector< std::vector<dtype> > &tsp, 
-                 const MatrixD &train, 
-                 const MatrixD &test,
-                 const std::string submission_file,
-                 const bool save_data,
-                 const bool load_data)
-{
-    int res;
-    DMatrixHandle h_train[1];
-    DMatrixHandle h_test;
-    const char* evnames[1]; // Names of the data matrix
-    evnames[0] = "training";
-
-    if (load_data) {
-        res = XGDMatrixCreateFromFile("train_matrix.dat", 0, &h_train[0]);
-        if (res != 0) {
-            std::cout << "Failed to load training matrix. Exiting\n";
-            return;
-        }
-        res = XGDMatrixCreateFromFile("test_matrix.dat", 0, &h_test);
-        if (res != 0) {
-            std::cout << "Failed to load test matrix. Exiting\n";
-            return;
-        }
-    } else {
-        BuildXGBoostMatrix(trp, &h_train[0]);
-        BuildXGBoostMatrix(tsp, &h_test);
-
-        if (save_data) {
-            res = XGDMatrixSaveBinary(h_train[0], "train_matrix.dat", 0);
-            if (res != 0) {
-                std::cout << "Failed to save training matrix\n";
-            }
-            res = XGDMatrixSaveBinary(h_test, "test_matrix.dat", 0);
-            if (res != 0) {
-                std::cout << "Failed to save test matrix\n";
-            }
-        }
-    }
-    
-    // Labels:
-    double global_bias = 0;
-    auto train_labels = std::vector<float>(trp[0].size());
-    int ti = 0;
-    for (int i = 0; i < train.rows(); ++i) {
-        for (int j = 0; j < train.cols(); ++j) {
-            if (train(i, j) > 0) {
-                train_labels[ti] = train(i, j);
-                global_bias += train(i, j);
-                ti++;
-            }
-        }
-    }
-    global_bias /= ti;
-
-    XGDMatrixSetFloatInfo(h_train[0], "label", train_labels.data(), trp[0].size());
-
-    BoosterHandle h_booster;
-    XGBoosterCreate(h_train, 1, &h_booster);
-    XGBoosterSetParam(h_booster, "booster", "gbtree");
-    XGBoosterSetParam(h_booster, "objective", "reg:linear");
-    XGBoosterSetParam(h_booster, "eval_metric", "rmse");
-    XGBoosterSetParam(h_booster, "seed", "123921");
-    XGBoosterSetParam(h_booster, "eta", "0.006");
-    XGBoosterSetParam(h_booster, "max_depth", "3");
-    XGBoosterSetParam(h_booster, "alpha", "10");
-    XGBoosterSetParam(h_booster, "lambda", "10");
-    XGBoosterSetParam(h_booster, "subsample", "0.5");
-    XGBoosterSetParam(h_booster, "base_score", std::to_string(global_bias).c_str());
-
-    // TODO: Early stopping?
-    int num_iter = 200;
-    int report_every = 10;
-    for (int iter = 1; iter <= num_iter; iter++) {
-        if (iter % report_every == 0) {
-            std::cout << "boosting round " << iter << "\n";
-            const char *eval_summary; // Memory leak
-            res = XGBoosterEvalOneIter(h_booster, iter, h_train, evnames, 1, &eval_summary);
-            if (res == 0) {
-                std::cout << eval_summary << "\n";
-            }
-        }
-        XGBoosterUpdateOneIter(h_booster, iter, h_train[0]);
-    }
-
-    // Predict
-    bst_ulong out_len;
-    const float *f; // This is never freed! (Will leak but who cares?)
-    XGBoosterPredict(h_booster, h_test, 0, 0, &out_len, &f);
-
-    // Write the 1D array to submission file. 
-    // Must translate back from 1D array to the 2D format
-    std::ofstream ofs;
-    ofs.open (submission_file, std::ofstream::out | std::ofstream::trunc);
-    ofs << "Id,Prediction\n";
-    uint fit = 0;
-    for (int u = 0; u < test.rows(); ++u) {
-        for (int i = 0; i < test.cols(); ++i) {
-            if (test(u, i) > 0) {
-                assert (fit < out_len);
-                ofs << "r" << (u + 1) << "_c" << (i + 1) << "," << f[fit] << "\n";
-                fit++;
-            }
-        }
-    }
-    ofs.close();
-
-    // free xgboost internal structures
-    XGDMatrixFree(h_train[0]);
-    XGDMatrixFree(h_test);
-    XGBoosterFree(h_booster);
-}
-
-
-void xgboostClassifDriver(int num_threads, ulong rseed, std::string submission_file) 
+void runAllClassif(int num_threads, ulong rseed, std::string submission_file) 
 {
     Settings settings = Settings(DEFAULT_SETTINGS);
     settings["num_threads"] = num_threads;
@@ -293,10 +147,9 @@ void xgboostClassifDriver(int num_threads, ulong rseed, std::string submission_f
     IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Neighbourhood_test.csv");
     trainVec.push_back(solver4.trainPredictor());
     testVec.push_back(solver4.testPredictor());
-    std::cout << "\n\n\n\n";
+    
 
-    //RunXGBoost(trainVec, testVec, data.first.cast<dtype>(),
-    //           mask.cast<dtype>(), submission_file, true, false);
+    std::cout << "\n\nFINISHED\n";
 }
 
 
@@ -313,7 +166,7 @@ int main () {
         } catch (const std::invalid_argument &ia) { }
     }
 
-    xgboostClassifDriver(num_threads, rseed, "submit_xgboost.csv");
+    runAllClassif(num_threads, rseed, "submit_xgboost.csv");
 
     return 0;
 }

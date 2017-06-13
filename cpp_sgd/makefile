@@ -10,13 +10,14 @@ ifeq ($(UNAME), Linux)
 		     -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wold-style-cast \
 		     -Wswitch-default -Wundef -Wno-unused -pedantic
 
+	# Use of -isystem instead of -I avoids printing tons of errors from Eigen
 	CFLAGS=-std=c++14 -O3 -march=native -fopenmp -isystem ../lib/  $(WARNINGS)
-	LDFLAGS=-L../xgboost/lib -L../xgboost/dmlc-core -L../xgboost/rabit/lib -lxgboost -lrabit -ldmlc -lgomp
+	LDFLAGS=
 else
 	CC=icpc
 	#CC=mpic++
 	CFLAGS=-Wall -std=c++14 -O3 -no-prec-div -fp-model precise -ipo -qopenmp -isystem lib/ -isystem ~/local/include
-	LDFLAGS=-L/cluster/home/gmeanti/local/lib -lxgboost -lrabit -ldmlc
+	LDFLAGS=
 endif
 
 
