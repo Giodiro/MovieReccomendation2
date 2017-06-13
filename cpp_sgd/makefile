@@ -2,12 +2,12 @@ UNAME := $(shell (lsb_release -ds 2>/dev/null || cat /etc/*release 2>/dev/null |
 
 ifeq ($(UNAME), Linux)
 	CC=g++      # Used for compiling SGD
-	#CC=mpic++  # Used for compiling MPI_SGD
+	#CC=mpic++   # Used for compiling MPI_SGD
 
 	WARNINGS=-Wall -Wextra -Wcast-align -Wcast-qual -Wctor-dtor-privacy \
 		     -Wdisabled-optimization -Wformat=2 -Winit-self -Wlogical-op -Wmissing-declarations \
 		     -Wmissing-include-dirs -Wnoexcept -Woverloaded-virtual -Wredundant-decls \
-		     -Wshadow -Wsign-promo -Wstrict-null-sentinel -Wold-style-cast \
+		     -Wshadow -Wsign-promo -Wstrict-null-sentinel \
 		     -Wswitch-default -Wundef -Wno-unused -pedantic
 
 	# Use of -isystem instead of -I avoids printing tons of errors from Eigen
@@ -20,11 +20,13 @@ else
 	LDFLAGS=
 endif
 
-
-EXECUTABLE=SGD
+## Compile the parameter search (MPI_SGD)
 #EXECUTABLE=MPI_SGD
-SOURCES=variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp main.cpp
 #SOURCES=variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp mpi_main.cpp
+
+## Compile the "normal" executable (SGD)
+EXECUTABLE=SGD
+SOURCES=variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp main.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
