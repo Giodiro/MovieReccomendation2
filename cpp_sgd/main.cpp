@@ -1,15 +1,9 @@
-#include <string>
-#include <iostream>
-#include <fstream>      // std::ofstream
-#include <memory>
-#include <chrono>       // time measurements
-#include <random>
-#include <iterator>
-#include <stdexcept>
-
 // uncomment to disable assert()
 // #define NDEBUG
-#include <cassert>
+// #define EIGEN_NO_DEBUG
+#include <string>
+#include <iostream>
+#include <stdexcept>
 
 #include <Eigen/Dense>
 
@@ -30,6 +24,9 @@ const static int NITEMS = 1000;
 const static std::string TRAIN_DATA_FILE = "../data_train.csv";
 const static std::string MASK_DATA_FILE = "../sampleSubmission.csv";
 
+/**
+ * These settings were chosen via a long parameter search with the IntegratedSolver.
+ */
 const static Settings DEFAULT_SETTINGS = {
     {"nusers", NUSERS},
     {"nitems", NITEMS},
