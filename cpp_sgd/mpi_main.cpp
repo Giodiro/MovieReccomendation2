@@ -8,6 +8,7 @@
 #include <ctime>
 #include <random>
 #include <iterator>
+
 // uncomment to disable assert()
 // #define NDEBUG
 #include <cassert>
@@ -21,7 +22,6 @@
 #include "evaluation.h"
 #include "sgd.h"
 #include "variant.cpp"
-
 
 // Define "tags" which identify messages sent between master and slave in  MPI
 #define LENGTH_TAG 0
@@ -341,7 +341,7 @@ int main(int argc, char** argv)
         master (min_max_config, rseed, MAX_TASKS, csave);
     }
     else {
-        slave<IntegratedSolver> (data_rseed);
+        slave<reccommend::IntegratedSolver> (data_rseed);
     }
     MPI_Finalize();
     return 0;
@@ -412,7 +412,7 @@ void master (SettingsRange &min_max_config,
         sendConfig(curr_config, rank);
 
         task_start[rank] = std::chrono::high_resolution_clock::now();
-        std::cout << now() << "Sent task " << sent_tasks << " to node " << rank << "\n";
+        std::cout << reccommend::now() << "Sent task " << sent_tasks << " to node " << rank << "\n";
         sent_tasks++;
     }
 
@@ -425,7 +425,7 @@ void master (SettingsRange &min_max_config,
             write_config_to_csv(config_scores.end()-WRITE_CONFIG_EVERY,
                 config_scores.end(),
                 config_save_file);
-            std::cout << now() << config_scores.size() << " results written to " << config_save_file << "\n";
+            std::cout << reccommend::now() << config_scores.size() << " results written to " << config_save_file << "\n";
         }
         double test_score;
         MPI_Recv( &test_score, 1, MPI_DOUBLE, MPI_ANY_SOURCE, SCORE_TAG, MPI_COMM_WORLD, &status);
@@ -436,9 +436,9 @@ void master (SettingsRange &min_max_config,
         if (test_score != test_score) {
             test_score = DEFAULT_BAD_SCORE;
         }
-        std::cout << now() << "Received task from " << source
+        std::cout << reccommend::now() << "Received task from " << source
                   << ". Score = " << test_score 
-                  << ", Elapsed = " << static_cast<int>(elapsed(task_start[source]) / 1000) << "s\n";
+                  << ", Elapsed = " << static_cast<int>(reccommend::elapsed(task_start[source]) / 1000) << "s\n";
 
         auto copied_config = rconfig;
         config_scores.push_back(
@@ -460,7 +460,7 @@ void master (SettingsRange &min_max_config,
         sendConfig(curr_config, source);
 
         task_start[source] = std::chrono::high_resolution_clock::now();
-        std::cout << now() << "Sent task " << sent_tasks << " to " << source << "\n";
+        std::cout << reccommend::now() << "Sent task " << sent_tasks << " to " << source << "\n";
         sent_tasks++;
     }
 
@@ -491,7 +491,7 @@ void slave (ulong data_rseed)
         Settings rconfig = recvConfig(0);
 
         /* Perform task */
-        test_score = kfold_cv<Solver>(CV_K, rconfig, cv_data);
+        test_score = reccommend::kfoldCV<Solver>(CV_K, rconfig, cv_data, 0);
 
         /* Send messages out */
         MPI_Send( &test_score, 1,   MPI_DOUBLE, 0, SCORE_TAG,        MPI_COMM_WORLD );
