@@ -82,10 +82,16 @@ std::string chooseParamName(const SettingsRange &min_max_config, std::mt19937 &r
 SettingsEntry nextConfig(SettingsRange &min_max_config, std::mt19937 &rng);
 
 /**
- * Generate the starting point for the parameter search.
+ * Generate the starting point for the parameter search with the Integrated solver.
+ * Most parameters can be modified within a large range.
  */
-SettingsRange defaultConfig (const int num_threads);
+SettingsRange getIntegratedConfig (const int num_threads);
 
+/**
+ * Configuration for searching parameters with the SVD solver.
+ * Here large importance is given to num_factors, K1 and K2.
+ */
+SettingsRange getSVDConfig (const int num_threads);
 
 /**
  * Execute the master routine.
@@ -167,8 +173,40 @@ std::string chooseParamName(
 }
 
 
-SettingsRange defaultConfig (const int num_threads) 
-{
+SettingsRange getSVDConfig (const int num_threads) {
+    SettingsRange min_max_config;
+    config_var nusers_choice;
+    nusers_choice.set<int>(NUSERS);
+    min_max_config["nusers"] = nusers_choice;
+
+    config_var nitems_choice;
+    nitems_choice.set<int>(NITEMS);
+    min_max_config["nitems"] = nitems_choice;
+
+    config_var num_factors_choice;
+    num_factors_choice.set<pair<int, int> >(pair<int, int>(2, 200));
+    min_max_config["num_factors"] = num_factors_choice;
+
+    config_var K1_choice;
+    K1_choice.set<pair<int, int> >(pair<int, int>(1, 200));
+    min_max_config["K1"] = K1_choice;
+
+    config_var K2_choice;
+    K2_choice.set<pair<int, int> >(pair<int, int>(1, 200));
+    min_max_config["K2"] = K2_choice;
+
+    config_var num_threads_choice;
+    num_threads_choice.set<int>(1);
+    min_max_config["num_threads"] = num_threads_choice;
+
+    config_var max_iter_choice;
+    max_iter_choice.set<int>(1);
+    min_max_config["max_iter"] = max_iter_choice;
+
+    return min_max_config;
+}
+
+SettingsRange getIntegratedConfig (const int num_threads) {
     /* Define the settings */
     SettingsRange min_max_config;
     config_var nusers_choice;
@@ -327,21 +365,50 @@ int main(int argc, char** argv)
     // Force flushing of output
     std::cout.setf( std::ios_base::unitbuf );
 
-    unsigned long rseed = 123591;
-    unsigned long data_rseed = 12633419;
+    unsigned long rseed = 12351;
+    unsigned long data_rseed = 1633419;
     int           num_threads = 1;
     int           rank;
     std::string   csave = "saved_data/rsearch_configs.csv";
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    /* Read command line argument */
+    std::string searchType;
+    if (argc > 1) {
+        searchType = argv[1];
+    } else {
+        std::cout << "No argument found for 'search type'. Please specify a command line argument:\n"
+                  << "MPI_SGD <integrated>|<svd>\n";
+        return 1;
+    }
 
-    if (rank == 0) {
-        auto min_max_config = defaultConfig(num_threads);
+
+    if (rank == 0) { /* Master routine */
+        SettingsRange min_max_config;
+        if (searchType == "integrated") {
+            min_max_config = getIntegratedConfig(num_threads);
+        }
+        else if (searchType == "svd") {
+            min_max_config = getSVDConfig(num_threads);
+        }
+        else {
+            std::cout << "Chosen search type (" << searchType << ") is not valid." << "\n";
+            return 2;
+        }
         master (min_max_config, rseed, MAX_TASKS, csave);
     }
-    else {
-        slave<reccommend::IntegratedSolver> (data_rseed);
+    else { /* Slave routine */
+        if (searchType == "integrated") {
+            slave<reccommend::IntegratedSolver> (data_rseed);
+        }
+        else if (searchType == "svd") {
+            slave<reccommend::SVD> (data_rseed);
+        }
+        else {
+            std::cout << "Chosen search type (" << searchType << ") is not valid." << "\n";
+            return 2;
+        }
     }
     MPI_Finalize();
     return 0;
@@ -378,11 +445,11 @@ void master (SettingsRange &min_max_config,
     std::string config_save_file)
 {
     MPI_Status     status;
-    int ntasks;
+    int            ntasks;
     MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
-    uint sent_tasks = 1;
+    uint           sent_tasks = 1;
     std::vector<std::pair<Settings, double>> config_scores;
-    double best_score = DEFAULT_BAD_SCORE;
+    double         best_score = DEFAULT_BAD_SCORE;
     std::unordered_map<int, dTimePoint> task_start;
     
     /*
@@ -497,5 +564,4 @@ void slave (ulong data_rseed)
         MPI_Send( &test_score, 1,   MPI_DOUBLE, 0, SCORE_TAG,        MPI_COMM_WORLD );
         sendConfig(rconfig, 0);
     }
-    
 }
