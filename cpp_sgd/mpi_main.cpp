@@ -33,7 +33,7 @@
 
 #define DEFAULT_BAD_SCORE 10000
 #define WRITE_CONFIG_EVERY 50
-#define MAX_TASKS 2000
+#define MAX_TASKS 10000
 #define CV_TEST_PERCENT 0.1
 #define CV_K 3
 
@@ -184,15 +184,15 @@ SettingsRange getSVDConfig (const int num_threads) {
     min_max_config["nitems"] = nitems_choice;
 
     config_var num_factors_choice;
-    num_factors_choice.set<pair<int, int> >(pair<int, int>(2, 200));
+    num_factors_choice.set<pair<int, int> >(pair<int, int>(2, 500));
     min_max_config["num_factors"] = num_factors_choice;
 
     config_var K1_choice;
-    K1_choice.set<pair<int, int> >(pair<int, int>(1, 200));
+    K1_choice.set<pair<int, int> >(pair<int, int>(1, 400));
     min_max_config["K1"] = K1_choice;
 
     config_var K2_choice;
-    K2_choice.set<pair<int, int> >(pair<int, int>(1, 200));
+    K2_choice.set<pair<int, int> >(pair<int, int>(1, 400));
     min_max_config["K2"] = K2_choice;
 
     config_var num_threads_choice;
@@ -369,7 +369,7 @@ int main(int argc, char** argv)
     unsigned long data_rseed = 1633419;
     int           num_threads = 1;
     int           rank;
-    std::string   csave = "saved_data/rsearch_configs.csv";
+    std::string   csave = "../saved_data/svd_rsearch_configs.csv";
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
