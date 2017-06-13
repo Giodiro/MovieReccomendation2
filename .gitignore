@@ -1,0 +1,13 @@
+*.o
+*.pdf
+*.pyc
+*.zip
+.ipynb_checkpoints/
+SGD
+MPI_SGD
+
+lib/
+xgboost/
+submissions/
+saved_data/
+ParallelSGD_Cython/
