@@ -33,7 +33,6 @@
 
 #define DEFAULT_BAD_SCORE 10000
 #define WRITE_CONFIG_EVERY 50
-#define MAX_TASKS 10000
 #define CV_TEST_PERCENT 0.1
 #define CV_K 3
 
@@ -129,7 +128,7 @@ Settings recvConfig(int rank);
 /**
  * Write a list of configurations, appending to specified file. (TODO: should be in IOUtil.cpp)
  */
-void write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbegin,
+bool write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbegin,
                          std::vector<std::pair<Settings, double>>::iterator cend,
                          std::string fname);
 
@@ -184,15 +183,15 @@ SettingsRange getSVDConfig (const int num_threads) {
     min_max_config["nitems"] = nitems_choice;
 
     config_var num_factors_choice;
-    num_factors_choice.set<pair<int, int> >(pair<int, int>(2, 500));
+    num_factors_choice.set<pair<int, int> >(pair<int, int>(2, 100));
     min_max_config["num_factors"] = num_factors_choice;
 
     config_var K1_choice;
-    K1_choice.set<pair<int, int> >(pair<int, int>(1, 400));
+    K1_choice.set<pair<int, int> >(pair<int, int>(1, 100));
     min_max_config["K1"] = K1_choice;
 
     config_var K2_choice;
-    K2_choice.set<pair<int, int> >(pair<int, int>(1, 400));
+    K2_choice.set<pair<int, int> >(pair<int, int>(1, 100));
     min_max_config["K2"] = K2_choice;
 
     config_var num_threads_choice;
@@ -358,18 +357,17 @@ Settings recvConfig(int rank)
 
 
 
-int main(int argc, char** argv) 
-{
+int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
  
     // Force flushing of output
     std::cout.setf( std::ios_base::unitbuf );
 
-    unsigned long rseed = 12351;
+    unsigned long rseed = 18351;
     unsigned long data_rseed = 1633419;
     int           num_threads = 1;
     int           rank;
-    std::string   csave = "../saved_data/svd_rsearch_configs.csv";
+    std::string   save_folder = "/cluster/home/gmeanti/MovieReccomendation2/saved_data/";
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -386,17 +384,23 @@ int main(int argc, char** argv)
 
     if (rank == 0) { /* Master routine */
         SettingsRange min_max_config;
+        std::string   save_file;
+        int           max_tasks;
         if (searchType == "integrated") {
             min_max_config = getIntegratedConfig(num_threads);
+            save_file = save_folder + "/integrated_rsearch_configs.csv";
+            max_tasks = 2000;
         }
         else if (searchType == "svd") {
             min_max_config = getSVDConfig(num_threads);
+            save_file = save_folder + "/svd_rsearch_configs.csv";
+            max_tasks = 10000;
         }
         else {
             std::cout << "Chosen search type (" << searchType << ") is not valid." << "\n";
             return 2;
         }
-        master (min_max_config, rseed, MAX_TASKS, csave);
+        master (min_max_config, rseed, max_tasks, save_file);
     }
     else { /* Slave routine */
         if (searchType == "integrated") {
@@ -416,24 +420,31 @@ int main(int argc, char** argv)
 
 
 
-void write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbegin, 
+bool write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbegin, 
     std::vector<std::pair<Settings, double>>::iterator cend,
     std::string fname) 
 {
+    bool success = true;
     std::ofstream ofs;
-    ofs.open (fname, std::ofstream::out | std::ofstream::app);
-    
-    for (; cbegin != cend; ++cbegin) {
-        Settings config = cbegin->first;
-        double score = cbegin->second;
-        ofs << score << ",";
-        for (auto it = config.begin(); it != config.end(); ++it) {
-            ofs << it->first << ":" << it->second << ",";
+    ofs.exceptions( ofstream::failbit );
+    try {
+        ofs.open (fname, std::ofstream::out | std::ofstream::app);
+
+        for (; cbegin != cend; ++cbegin) {
+            Settings config = cbegin->first;
+            double score = cbegin->second;
+            ofs << score << ",";
+            for (auto it = config.begin(); it != config.end(); ++it) {
+                ofs << it->first << ":" << it->second << ",";
+            }
+            ofs << "\n";
         }
-        ofs << "\n";
+    } catch ( const ofstream::failure &e ) {
+        success = false;
     }
 
     ofs.close();
+    return success;
 }
 
 
@@ -489,10 +500,13 @@ void master (SettingsRange &min_max_config,
      */
     while (sent_tasks <= max_tasks) {
         if (config_scores.size() > 0 && config_scores.size() % WRITE_CONFIG_EVERY == 0) {
-            write_config_to_csv(config_scores.end()-WRITE_CONFIG_EVERY,
-                config_scores.end(),
-                config_save_file);
-            std::cout << reccommend::now() << config_scores.size() << " results written to " << config_save_file << "\n";
+            if(write_config_to_csv(config_scores.end()-WRITE_CONFIG_EVERY,
+                                   config_scores.end(),
+                                   config_save_file)) {
+                std::cout << reccommend::now() << config_scores.size() << " results written to " << config_save_file << "\n";
+            } else {
+                std::cout << "Failed to write config data to " << config_save_file << "\n";
+            }
         }
         double test_score;
         MPI_Recv( &test_score, 1, MPI_DOUBLE, MPI_ANY_SOURCE, SCORE_TAG, MPI_COMM_WORLD, &status);
