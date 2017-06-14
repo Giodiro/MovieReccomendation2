@@ -47,10 +47,20 @@ const static Settings DEFAULT_SETTINGS = {
 };
 
 
-void runAllClassif(int num_threads, ulong rseed, std::string submission_file);
+void runAllClassif(const int num_threads, const ulong rseed,
+                   const std::string submission_file,
+                   const std::string mask_file,
+                   const std::string train_file,
+                   const int nusers, const int nitems,
+                   const bool doPrediction);
 
 
-void runAllClassif(int num_threads, ulong rseed, std::string submission_file) 
+void runAllClassif(const int num_threads, const ulong rseed,
+                   const std::string submission_file,
+                   const std::string mask_file,
+                   const std::string train_file,
+                   const int nusers, const int nitems,
+                   const bool doPrediction)
 {
     Settings settings = Settings(DEFAULT_SETTINGS);
     settings["num_threads"] = num_threads;
@@ -60,9 +70,9 @@ void runAllClassif(int num_threads, ulong rseed, std::string submission_file)
     DataPair data;
     std::vector<DataPair> cv_data;
     try {
-        mask = IOUtil::readMask(MASK_DATA_FILE, NUSERS, NITEMS);
-        data = IOUtil::readData(TRAIN_DATA_FILE, 0.0, NUSERS, NITEMS, rseed);
-        cv_data = IOUtil::readDataCV(TRAIN_DATA_FILE, k, NUSERS, NITEMS, 0.2, rseed);
+        mask = IOUtil::readMask(mask_file, nusers, nitems);
+        data = IOUtil::readData(train_file, 0.0, nusers, nitems, rseed);
+        cv_data = IOUtil::readDataCV(train_file, k, nusers, nitems, 0.2, rseed);
     } 
     catch (const std::runtime_error& e) {
         cerr << e.what() << "\n";
@@ -74,33 +84,40 @@ void runAllClassif(int num_threads, ulong rseed, std::string submission_file)
     auto trainVec = std::vector< std::vector<dtype> >();
     auto testVec = std::vector< std::vector<dtype> >();
 
+    //std::vector< std::unique_ptr <reccommend::SGDSolver> > solverList;
+
+    //solverList.emplace_back(std::unique_ptr<reccommend::SGDSolver>(new reccommend::SVD(settings, data.first, mask)));
+
+
     std::cout << "******* Running SVD *******\n";
 
     test_score = reccommend::kfoldCV<reccommend::SVD>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
-    auto solver0 = reccommend::SVD(settings, data.first, mask);
-    solver0.run();
-    auto predictors = solver0.predictors();
-    IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_SVD_train.csv");
-    IOUtil::predictorToFile(mask, predictors.second, submission_file + "_SVD_test.csv");
-    trainVec.push_back(solver0.trainPredictor());
-    testVec.push_back(solver0.testPredictor());
+    if (doPrediction) {
+        auto solver0 = reccommend::SVD(settings, data.first, mask);
+        solver0.run();
+        auto predictors = solver0.predictors();
+        IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_SVD_train.csv");
+        IOUtil::predictorToFile(mask, predictors.second, submission_file + "_SVD_test.csv");
+        trainVec.push_back(solver0.trainPredictor());
+        testVec.push_back(solver0.testPredictor());
+    }
     std::cout << "\n\n\n\n";
-
 
     std::cout << "******* Running SimpleSGDSolver *******\n";
     
     test_score = reccommend::kfoldCV<reccommend::SimpleSGDSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
-
-    auto solver1 = reccommend::SimpleSGDSolver(settings, data.first, mask);
-    solver1.run();
-    predictors = solver1.predictors();
-    IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_simple_train.csv");
-    IOUtil::predictorToFile(mask, predictors.second, submission_file + "_simple_test.csv");
-    trainVec.push_back(solver1.trainPredictor());
-    testVec.push_back(solver1.testPredictor());
+    if (doPrediction) {
+        auto solver1 = reccommend::SimpleSGDSolver(settings, data.first, mask);
+        solver1.run();
+        auto predictors = solver1.predictors();
+        IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_simple_train.csv");
+        IOUtil::predictorToFile(mask, predictors.second, submission_file + "_simple_test.csv");
+        trainVec.push_back(solver1.trainPredictor());
+        testVec.push_back(solver1.testPredictor());
+    }
     std::cout << "\n\n\n\n";
 
     std::cout << "******* Running SGDppSolver *******\n";
@@ -108,14 +125,15 @@ void runAllClassif(int num_threads, ulong rseed, std::string submission_file)
     test_score = reccommend::kfoldCV<reccommend::SGDppSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
-
-    auto solver2 = reccommend::SGDppSolver(settings, data.first, mask);
-    solver2.run();
-    predictors = solver2.predictors();
-    IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_SGD++_train.csv");
-    IOUtil::predictorToFile(mask, predictors.second, submission_file + "_SGD++_test.csv");
-    trainVec.push_back(solver2.trainPredictor());
-    testVec.push_back(solver2.testPredictor());
+    if (doPrediction) {
+        auto solver2 = reccommend::SGDppSolver(settings, data.first, mask);
+        solver2.run();
+        auto predictors = solver2.predictors();
+        IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_SGD++_train.csv");
+        IOUtil::predictorToFile(mask, predictors.second, submission_file + "_SGD++_test.csv");
+        trainVec.push_back(solver2.trainPredictor());
+        testVec.push_back(solver2.testPredictor());
+    }
     std::cout << "\n\n\n\n";
 
     std::cout << "******* Running IntegratedSolver *******\n";
@@ -123,34 +141,36 @@ void runAllClassif(int num_threads, ulong rseed, std::string submission_file)
     test_score = reccommend::kfoldCV<reccommend::IntegratedSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
-    auto solver3 = reccommend::IntegratedSolver(settings, data.first, mask);
-    solver3.run();
-    predictors = solver3.predictors();
-    IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Integrated_train.csv");
-    IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Integrated_test.csv");
-    trainVec.push_back(solver3.trainPredictor());
-    testVec.push_back(solver3.testPredictor());
-    std::cout << "\n\n\n\n";
-
+    if (doPrediction) {
+        auto solver3 = reccommend::IntegratedSolver(settings, data.first, mask);
+        solver3.run();
+        auto predictors = solver3.predictors();
+        IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Integrated_train.csv");
+        IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Integrated_test.csv");
+        trainVec.push_back(solver3.trainPredictor());
+        testVec.push_back(solver3.testPredictor());
+        std::cout << "\n\n\n\n";
+    }
     std::cout << "******* Running NeighbourhoodSolver *******\n";
         
     test_score = reccommend::kfoldCV<reccommend::NeighbourhoodSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
-    auto solver4 = reccommend::NeighbourhoodSolver(settings, data.first, mask);
-    solver4.run();
-    predictors = solver4.predictors();
-    IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Neighbourhood_train.csv");
-    IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Neighbourhood_test.csv");
-    trainVec.push_back(solver4.trainPredictor());
-    testVec.push_back(solver4.testPredictor());
-    
+    if (doPrediction) {
+        auto solver4 = reccommend::NeighbourhoodSolver(settings, data.first, mask);
+        solver4.run();
+        auto predictors = solver4.predictors();
+        IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Neighbourhood_train.csv");
+        IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Neighbourhood_test.csv");
+        trainVec.push_back(solver4.trainPredictor());
+        testVec.push_back(solver4.testPredictor());
+    }
 
     std::cout << "\n\nFINISHED\n";
 }
 
 
-int main () {
+int main(int argc, char** argv) {
     // Force flushing of output
     std::cout.setf( std::ios_base::unitbuf );
 
@@ -163,7 +183,26 @@ int main () {
         } catch (const std::invalid_argument &ia) { }
     }
 
-    runAllClassif(num_threads, rseed, "submit_xgboost.csv");
+    std::string benchmarkType;
+    if (argc > 1) {
+        benchmarkType = argv[1];
+    } else {
+        benchmarkType = "submission";
+    }
+
+    if (benchmarkType == "submission") {
+        runAllClassif(num_threads, rseed, "../saved_data/submissions/",
+                      MASK_DATA_FILE, TRAIN_DATA_FILE,
+                      NUSERS, NITEMS, true);
+    }
+    else if (benchmarkType == "movielens_1m") {
+        runAllClassif(num_threads, rseed, "../saved_data/submissions/",
+                      ".", "../saved_data/movielens/ml-1m/ratings_clean.csv",
+                      6040, 3952, false);
+    }
+    else {
+        std::cout << "Benchmark type " << benchmarkType << " is not implemented\n";
+    }
 
     return 0;
 }
