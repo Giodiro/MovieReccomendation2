@@ -23,8 +23,8 @@ sgd: CC=g++      # Used for compiling SGD
 else
 mpi: CC=mpic++
 sgd: CC=icpc
-	LDFLAGS=-isystem ../lib/ -isystem ~/local/include
-	CFLAGS=-Wall -std=c++14 -O3 -no-prec-div -fp-model precise -ipo -qopenmp $(LDFLAGS)
+	LDFLAGS=-qopenmp -isystem ../lib/ -isystem ~/local/include
+	CFLAGS=-Wall -std=c++14 -O3 -no-prec-div -fp-model precise -ipo $(LDFLAGS)
 endif
 
 COMMON_SOURCES = variant.cpp sgd_util.cpp sgd.cpp ioutil.cpp evaluation.cpp
