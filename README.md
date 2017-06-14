@@ -1,4 +1,10 @@
+## Folder organization
 
+ - *sgd_cpp*: contains the C++ implementation of stochastic gradient descent and many algorithms that use it for collaborative filtering. 2 main programs can be compiled: the first (`SGD`) uses all available algorithms and performs predictions writing them to file; the second (`MPI_SGD`) is used for performing random parameter search.
+ - *autoencoder*: implementation of a denoising autoencoder for collaborative filtering. Main file in here is `tf_sgd.py`.
+ - *unused_python*: contains old implementations, useful for reference but not used in practice anymore.
+ - *analyze_data.R*: script for analyzing results of parameter search.
+ - *XGBoost.ipynb*: IPython notebook used for running xgboost on many predictors obtained from the autoencoder and the SGD. The results of this are used for final predictions.
 
 ## Required libraries for training the autoencoder (`tf_sgd.py`)
  
