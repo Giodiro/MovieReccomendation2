@@ -19,7 +19,9 @@ namespace reccommend {
     
     typedef Eigen::Matrix<dtype, 1, Eigen::Dynamic> RowVectorD;
     // Change name from VectorD to ColVectorD
+
     typedef Eigen::Matrix<dtype, Eigen::Dynamic, 1> ColVectorD;
+    typedef Eigen::Matrix<int8_t, Eigen::Dynamic, 1> ColVectorI;
 
     /* USELESS
     typedef Eigen::Matrix<int8_t, Eigen::Dynamic, Eigen::Dynamic> MatrixTr;

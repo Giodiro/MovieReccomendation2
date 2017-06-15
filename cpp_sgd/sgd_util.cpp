@@ -1,14 +1,17 @@
-#include <cmath>        // abs, sqrt
+#include <cmath>         // abs, sqrt
+#include <algorithm>     // min, set_intersection
+
+#include <Eigen/Dense>
 
 #include "sgd_util.h"
 #include "sgd_types.h"
 
-#include <Eigen/Dense>
 
 using reccommend::dtype;
 using reccommend::MatrixD;
 using reccommend::MatrixI;
 using reccommend::ColVectorD;
+using reccommend::ColVectorI;
 using reccommend::RowVectorD;
 
 
@@ -46,6 +49,79 @@ dtype _calcPearson(const int i1, const int i2,
 }
 
 
+ColVectorD _rank(const ColVectorI &v) {
+    ColVectorI w(v.size());
+    for (int i = 0; i < v.size(); i++) {
+        w[i] = i;
+    }
+    std::sort(w.data(), w.data() + w.size(), [v](dtype i, dtype j) { return v[i] < v[j]; });
+
+    ColVectorD r(w.size());
+
+    for (int n, i = 0; i < w.size(); i += n)
+    {
+        n = 1;
+        while (i + n < w.size() && v[w[i]] == v[w[i+n]]) ++n;
+        for (int k = 0; k < n; ++k)
+        {
+            r[w[i+k]] = i + (n + 1) / 2.0; // average rank of n tied values
+        }
+    }
+    return r;
+}
+
+dtype _calcSpearman(const int i1, const int i2, const MatrixI &data) {
+    // Need to find indices of users which have rated both items (`nonzero`).
+    std::vector<int> nz1;
+    std::vector<int> nz2;
+    for (int u = 0; u < data.rows(); u++) {
+        if (data(u, i1) != 0) nz1.emplace_back(u);
+        if (data(u, i2) != 0) nz2.emplace_back(u);
+    }
+    std::vector<int> nonzero = std::vector<int>(std::min(nz1.size(), nz2.size()));
+    auto it = std::set_intersection (nz1.begin(), nz1.end(), nz2.begin(), nz2.end(), nonzero.begin());
+    nonzero.resize(it - nonzero.begin());
+
+    ColVectorI v1(nonzero.size());
+    ColVectorI v2(nonzero.size());
+
+    for (std::size_t i = 0; i < nonzero.size(); i++) {
+        v1[i] = data(nonzero[i], i1);
+        v2[i] = data(nonzero[i], i2);
+    }
+
+    ColVectorD r1 = _rank(v1);
+    ColVectorD r2 = _rank(v2);
+
+    // Finally we have the ranked vectors r1 and r2
+    // Now we apply formula from https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient
+    int L = r1.size();
+    dtype sum = 0;
+    for (int l = 0; l < L; l++) {
+        sum += (r1[l] - r2[l]) * (r1[l] - r2[l]);
+    }
+    return 1 - 6*sum / (L*L*L - L);
+}
+
+
+MatrixD reccommend::calcSpearmanMatrix (const MatrixI &data, const int num_threads) {
+    int nitems = data.cols();
+
+    MatrixD corrmat = MatrixD::Zero(nitems, nitems);
+
+    #pragma omp parallel num_threads(num_threads)
+    {
+        #pragma omp for schedule(static)
+        for (int i = 0; i < nitems; i++) {
+            for (int j = i+1; j < nitems; j++) {
+                corrmat(i, j) = _calcSpearman(i, j, data);
+            }
+        }
+    }
+    corrmat = corrmat + corrmat.adjoint().eval();
+    return corrmat;
+}
+
 
 MatrixD reccommend::calcPearsonMatrix(const MatrixI &data, const int shrinkage, const int num_threads) {
     int nitems = data.cols();
@@ -62,7 +138,6 @@ MatrixD reccommend::calcPearsonMatrix(const MatrixI &data, const int shrinkage, 
         }
     }
     corrmat = corrmat + corrmat.adjoint().eval();
-
     return corrmat;
 }
 

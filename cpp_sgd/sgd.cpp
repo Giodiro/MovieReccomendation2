@@ -211,8 +211,6 @@ dtype reccommend::SVD::predict(int u, int i) {
 void reccommend::SVD::postIter() {}
 
 
-
-
 /**
  * SimpleSGDSolver (basic model)
  */
@@ -371,8 +369,16 @@ bool reccommend::IntegratedSolver::initData ()
                     reccommend::calcBiasMatrix(m_train, m_globalBias, 
                                                getIntSetting("K1"), getIntSetting("K2"));
 
-    m_pearsMat = reccommend::calcPearsonMatrix(m_train, getIntSetting("correlation_shrinkage"), 
-                                               getIntSetting("num_threads"));
+    // Similarity score depends on constructor parameter `m_similarityType`:
+    if (m_similarityType == "pearson") {
+        m_simMat = reccommend::calcPearsonMatrix(m_train, getIntSetting("correlation_shrinkage"),
+                                                   getIntSetting("num_threads"));
+    } else if (m_similarityType == "spearman") {
+        m_simMat = reccommend::calcSpearmanMatrix(m_train, getIntSetting("num_threads"));
+    } else {
+        std::cout << "Invalid similarity score " << m_similarityType << "\n";
+        return false;
+    }
 
     // Precompute the which_num_u arrays (indices of ratings sorted by users)
     m_explicitU = std::vector<vector<int> >(getIntSetting("nusers"));
@@ -405,13 +411,13 @@ dtype reccommend::IntegratedSolver::predict (int u, int i)
                 explicitU.begin() + inv_kmax_expl,
                 explicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
     nth_element(implicitU.begin(), 
                 implicitU.begin() + inv_kmax_impl,
                 implicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
 
     dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
@@ -472,13 +478,13 @@ bool reccommend::IntegratedSolver::predictUpdate (int u, int i)
                 explicitU.begin() + inv_kmax_expl,
                 explicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
     nth_element(implicitU.begin(), 
                 implicitU.begin() + inv_kmax_impl,
                 implicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
 
     dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
@@ -579,13 +585,13 @@ dtype reccommend::NeighbourhoodSolver::predict (int u, int i)
                 explicitU.begin() + inv_kmax_expl,
                 explicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
     nth_element(implicitU.begin(), 
                 implicitU.begin() + inv_kmax_impl,
                 implicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
 
     dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
@@ -625,13 +631,13 @@ bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i)
                 explicitU.begin() + inv_kmax_expl,
                 explicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
     nth_element(implicitU.begin(), 
                 implicitU.begin() + inv_kmax_impl,
                 implicitU.end(),
                 [this, i] (const int i1, const int i2) {
-                    return m_pearsMat(i, i1) < m_pearsMat(i, i2);
+                    return m_simMat(i, i1) < m_simMat(i, i2);
                 });
 
     dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);

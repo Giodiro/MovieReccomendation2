@@ -9,14 +9,23 @@
 reccommend::dtype _calcPearson(const int i1, const int i2, 
                                const int lambda2, const reccommend::MatrixI &data);
 
+reccommend::ColVectorD _rank(const reccommend::ColVectorI &v);
+
+reccommend::dtype _calcSpearman(const int i1, const int i2, const reccommend::MatrixI &data);
+
+
+
 
 namespace reccommend {
 
-    MatrixD calcPearsonMatrix (const MatrixI &data, 
-                               const int shrinkage, 
+    MatrixD calcPearsonMatrix (const MatrixI &data,
+                               const int shrinkage,
                                const int num_threads);
 
-    dtype   calcGlobalMean    (const MatrixI &data, 
+    MatrixD calcSpearmanMatrix (const MatrixI &data,
+                                const int num_threads);
+
+    dtype   calcGlobalMean    (const MatrixI &data,
                                const std::vector<std::pair<int, int> > &dataIndices);
 
     /**
@@ -24,9 +33,9 @@ namespace reccommend {
        The matrix is used to assign a default value to the missing ratings 
        in the training matrix.
     */
-    MatrixD calcBiasMatrix    (const MatrixI &data, 
-                               const dtype globalMean, 
-                               const int K1, 
+    MatrixD calcBiasMatrix    (const MatrixI &data,
+                               const dtype globalMean,
+                               const int K1,
                                const int K2);
 }
 

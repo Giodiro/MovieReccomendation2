@@ -216,15 +216,21 @@ namespace reccommend {
     class IntegratedSolver : public SGDppSolver
     {
     public:
-        using SGDppSolver::SGDppSolver;
+        IntegratedSolver(Settings settings, const MatrixI &train, const MatrixI &test,
+                         const std::string similarityType)
+            : SGDppSolver(settings, train, test) {
+            m_similarityType = similarityType;
+        }
+
         dtype predict (int u, int i) override;
     protected:
         bool initData () override;
         bool predictUpdate (int u, int i) override;
         void postIter () override;
 
+        std::string m_similarityType;
         MatrixD m_bias_offset;
-        MatrixD m_pearsMat;
+        MatrixD m_simMat;
         MatrixD m_w;
         MatrixD m_c;
         vector<vector<int>> m_explicitU;
