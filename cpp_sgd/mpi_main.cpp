@@ -100,6 +100,12 @@ SettingsRange getSVDConfig (const int num_threads);
 SettingsRange getSimpleConfig(const int num_threads);
 
 /**
+ * Configuration for searching parameters with the SGDpp solver.
+ * parameters searched are same as for simple config.
+ */
+SettingsRange getSGDppConfig (const int num_threads);
+
+/**
  * Execute the master routine.
  */
 void master (SettingsRange &min_max_config,
@@ -180,6 +186,53 @@ std::string chooseParamName(
 
 
 SettingsRange getSimpleConfig(const int num_threads) {
+    /* Define the settings */
+    SettingsRange min_max_config;
+    config_var nusers_choice;
+    nusers_choice.set<int>(NUSERS);
+    min_max_config["nusers"] = nusers_choice;
+
+    config_var nitems_choice;
+    nitems_choice.set<int>(NITEMS);
+    min_max_config["nitems"] = nitems_choice;
+
+    config_var lrate1_choice;
+    lrate1_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.03));
+    min_max_config["lrate1"] = lrate1_choice;
+
+    config_var lrate2_choice;
+    lrate2_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.03));
+    min_max_config["lrate2"] = lrate2_choice;
+
+    config_var regl6_choice;
+    regl6_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl6"] = regl6_choice;
+
+    config_var regl7_choice;
+    regl7_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl7"] = regl7_choice;
+
+    config_var lrate_reduction_choice;
+    lrate_reduction_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.85, 0.999));
+    min_max_config["lrate_reduction"] = lrate_reduction_choice;
+
+    config_var num_factors_choice;
+    num_factors_choice.set<pair<int, int> >(pair<int, int>(2, 100));
+    min_max_config["num_factors"] = num_factors_choice;
+
+    config_var max_iter_choice;
+    max_iter_choice.set<pair<int, int> >(pair<int, int>(10, 80));
+    //max_iter_choice.set<int>(1);//30);
+    min_max_config["max_iter"] = max_iter_choice;
+
+    config_var num_threads_choice;
+    num_threads_choice.set<int>(num_threads);
+    min_max_config["num_threads"] = num_threads_choice;
+
+    return min_max_config;
+}
+
+SettingsRange getSGDppConfig (const int num_threads) {
     /* Define the settings */
     SettingsRange min_max_config;
     config_var nusers_choice;
@@ -451,6 +504,11 @@ int main(int argc, char** argv) {
             save_file = save_folder + "/simple_rsearch_configs.csv";
             max_tasks = 10000;
         }
+        else if (searchType == "SVD++") {
+            min_max_config = getSGDppConfig(num_threads);
+            save_file = save_folder + "/SVD++_rsearch_configs.csv";
+            max_tasks = 5000;
+        }
         else {
             std::cout << "Chosen search type (" << searchType << ") is not valid." << "\n";
             return 2;
@@ -466,6 +524,9 @@ int main(int argc, char** argv) {
         }
         else if (searchType == "simple") {
             slave<reccommend::SimpleSGDSolver> (data_rseed);
+        }
+        else if (searchType == "SVD++") {
+            slave<reccommend::SGDppSolver> (data_rseed);
         }
         else {
             std::cout << "Chosen search type (" << searchType << ") is not valid." << "\n";
