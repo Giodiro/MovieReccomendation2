@@ -70,38 +70,50 @@ double reccommend::kfoldCV(const int k,
 // Whenever another solver is added its definition should also be
 // appended here.
 template double reccommend::kfoldCV<reccommend::BiasPredictor>(
-                           const int k, 
+                           const int k,
                            Settings &config,  
                            const std::vector< DataPair > &cvData,
                            const int verbose);
 
 template double reccommend::kfoldCV<reccommend::SVD>(
-                           const int k, 
-                           Settings &config,  
+                           const int k,
+                           Settings &config,
                            const std::vector< DataPair > &cvData,
                            const int verbose);
 
 template double reccommend::kfoldCV<reccommend::SimpleSGDSolver>(
-                           const int k, 
-                           Settings &config,  
+                           const int k,
+                           Settings &config,
                            const std::vector< DataPair > &cvData,
                            const int verbose);
 
 template double reccommend::kfoldCV<reccommend::SGDppSolver>(
-                           const int k, 
-                           Settings &config,  
+                           const int k,
+                           Settings &config,
                            const std::vector< DataPair > &cvData,
                            const int verbose);
 
-template double reccommend::kfoldCV<reccommend::IntegratedSolver>(
-                           const int k, 
-                           Settings &config,  
+template double reccommend::kfoldCV<reccommend::IntegratedPearsonSolver>(
+                           const int k,
+                           Settings &config,
                            const std::vector< DataPair > &cvData,
                            const int verbose);
 
-template double reccommend::kfoldCV<reccommend::NeighbourhoodSolver>(
-                           const int k, 
-                           Settings &config,  
+template double reccommend::kfoldCV<reccommend::IntegratedSpearmanSolver>(
+                           const int k,
+                           Settings &config,
+                           const std::vector< DataPair > &cvData,
+                           const int verbose);
+
+template double reccommend::kfoldCV<reccommend::NeighbourhoodPearsonSolver>(
+                           const int k,
+                           Settings &config,
+                           const std::vector< DataPair > &cvData,
+                           const int verbose);
+
+template double reccommend::kfoldCV<reccommend::NeighbourhoodSpearmanSolver>(
+                           const int k,
+                           Settings &config,
                            const std::vector< DataPair > &cvData,
                            const int verbose);
 
