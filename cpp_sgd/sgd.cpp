@@ -22,8 +22,7 @@ using reccommend::ColVectorD;
 using reccommend::RowVectorD;
 
 
-inline float gaussianSample(float mean, float stdev, dtype dummy)
-{
+inline float gaussianSample(float mean, float stdev, dtype dummy) {
   static mt19937 rng;
   static normal_distribution<float> nd(mean, stdev);
   return nd(rng);
@@ -33,8 +32,7 @@ inline float gaussianSample(float mean, float stdev, dtype dummy)
  * SGDSolver (base class)
  */
 
-bool reccommend::SGDSolver::initData ()
-{
+bool reccommend::SGDSolver::initData () {
     for (int i = 0; i < m_train.rows(); ++i) {
         for (int j = 0; j < m_train.cols(); ++j) {
             if (m_train(i, j) > 0) {
@@ -48,8 +46,7 @@ bool reccommend::SGDSolver::initData ()
     return true;
 }
 
-std::vector<dtype> reccommend::SGDSolver::singlePredictor(const std::vector<pair<int, int> > &indices)
-{
+std::vector<dtype> reccommend::SGDSolver::singlePredictor(const std::vector<pair<int, int> > &indices) {
     std::vector<dtype> preds(indices.size());
     for (size_t i = 0; i < indices.size(); i++) {
         preds[i] = predict(indices[i].first, indices[i].second);
@@ -58,8 +55,7 @@ std::vector<dtype> reccommend::SGDSolver::singlePredictor(const std::vector<pair
 }
 
 template <typename A>
-MatrixD reccommend::SGDSolver::singlePredictor(const Eigen::DenseBase<A> &data) 
-{
+MatrixD reccommend::SGDSolver::singlePredictor(const Eigen::DenseBase<A> &data) {
     // Iterate through all non-zero entries in the data matrix
     // and perform predictions in those points.
     MatrixD predMat(data.rows(), data.cols());
@@ -77,8 +73,7 @@ MatrixD reccommend::SGDSolver::singlePredictor(const Eigen::DenseBase<A> &data)
     return predMat;
 }
 
-std::pair<MatrixD, MatrixD> reccommend::SGDSolver::predictors () 
-{
+std::pair<MatrixD, MatrixD> reccommend::SGDSolver::predictors () {
     // Training predictor
     MatrixD trainPred = singlePredictor(m_train);
     // Test predictor
@@ -88,8 +83,7 @@ std::pair<MatrixD, MatrixD> reccommend::SGDSolver::predictors ()
 }
 
 
-SGDSolver& reccommend::SGDSolver::run ()
-{
+SGDSolver& reccommend::SGDSolver::run () {
     volatile int  update      = 1; /* Thread shared variable holding the number of updates made so far */
     volatile bool die_flag    = false; /* Thread shared variable indicating whether all threads should stop */
 
@@ -215,15 +209,13 @@ void reccommend::SVD::postIter() {}
  * SimpleSGDSolver (basic model)
  */
 
-dtype reccommend::SimpleSGDSolver::predict (int u, int i) 
-{
+dtype reccommend::SimpleSGDSolver::predict (int u, int i) {
     dtype prediction = m_globalBias + m_userBias(u) + m_itemBias(i) +
                  m_userVecs.row(u) * m_itemVecs.row(i).adjoint();
     return prediction;
 }
 
-bool reccommend::SimpleSGDSolver::initData() 
-{
+bool reccommend::SimpleSGDSolver::initData() {
     SGDSolver::initData();
 
     float stdev = 1 / getSetting("num_factors");
@@ -243,8 +235,7 @@ bool reccommend::SimpleSGDSolver::initData()
     return true;
 }
 
-bool reccommend::SimpleSGDSolver::predictUpdate (int u, int i)
-{
+bool reccommend::SimpleSGDSolver::predictUpdate (int u, int i) {
     dtype p = predict(u, i);
     dtype err = m_train(u, i) - p;
     m_userBias(u) += getSetting("lrate1") * (err - getSetting("regl6") * m_userBias(u));
@@ -257,8 +248,7 @@ bool reccommend::SimpleSGDSolver::predictUpdate (int u, int i)
     return true;
 }
 
-void reccommend::SimpleSGDSolver::postIter ()
-{
+void reccommend::SimpleSGDSolver::postIter () {
     dtype lrate1 = getSetting("lrate1");
     dtype lrate2 = getSetting("lrate2");
     setSetting("lrate1", lrate1 * getSetting("lrate_reduction"));
@@ -271,8 +261,7 @@ void reccommend::SimpleSGDSolver::postIter ()
  * SGDppSolver (SVD++). Inherits from the basic model
  */
 
-bool reccommend::SGDppSolver::initData () 
-{
+bool reccommend::SGDppSolver::initData () {
     // Initialize from super class
     SimpleSGDSolver::initData();
 
@@ -292,8 +281,7 @@ bool reccommend::SGDppSolver::initData ()
     return true;
 }
 
-dtype reccommend::SGDppSolver::predict (int u, int i) 
-{
+dtype reccommend::SGDppSolver::predict (int u, int i) {
     std::vector<int> implicitU = m_implicitU[u];
     dtype n_impl_tot = 1 / sqrt(implicitU.size());
     
@@ -310,8 +298,7 @@ dtype reccommend::SGDppSolver::predict (int u, int i)
     return prediction;
 }
 
-bool reccommend::SGDppSolver::predictUpdate (int u, int i)
-{
+bool reccommend::SGDppSolver::predictUpdate (int u, int i) {
     // See second half of page 6 in
     // http://cs.rochester.edu/twiki/pub/Main/HarpSeminar/Factorization_Meets_the_Neighborhood-_a_Multifaceted_Collaborative_Filtering_Model.pdf
     // (this is the SVD++ model)
@@ -349,8 +336,7 @@ bool reccommend::SGDppSolver::predictUpdate (int u, int i)
     return true;
 }
 
-void reccommend::SGDppSolver::postIter ()
-{
+void reccommend::SGDppSolver::postIter (){
     SimpleSGDSolver::postIter();
 }
 
@@ -358,8 +344,7 @@ void reccommend::SGDppSolver::postIter ()
  * Integrated model
  */
 
-bool reccommend::IntegratedSolver::initData () 
-{
+bool reccommend::IntegratedSolver::initData () {
     // Initialize from super class
     SGDppSolver::initData();
 
@@ -394,8 +379,7 @@ bool reccommend::IntegratedSolver::initData ()
     return true;
 }
 
-dtype reccommend::IntegratedSolver::predict (int u, int i) 
-{
+dtype reccommend::IntegratedSolver::predict (int u, int i) {
     // Copy the explicit/implicit user rating indices vectors into local copies
     std::vector<int> explicitU(m_explicitU[u].size());
     std::copy(m_explicitU[u].begin(), m_explicitU[u].end(), explicitU.begin());
@@ -455,8 +439,7 @@ dtype reccommend::IntegratedSolver::predict (int u, int i)
 }
 
 
-bool reccommend::IntegratedSolver::predictUpdate (int u, int i)
-{
+bool reccommend::IntegratedSolver::predictUpdate (int u, int i) {
     /*
      * Optimization candidates:
      *  - precompute m_train - m_fixed_bias (this is also the only place where m_fixed_bias appears)
@@ -552,8 +535,7 @@ bool reccommend::IntegratedSolver::predictUpdate (int u, int i)
     return true;
 }
 
-void reccommend::IntegratedSolver::postIter ()
-{
+void reccommend::IntegratedSolver::postIter () {
     SGDppSolver::postIter();
     dtype lrate3 = getSetting("lrate3");
     setSetting("lrate3", lrate3 * getSetting("lrate_reduction"));
@@ -565,13 +547,11 @@ void reccommend::IntegratedSolver::postIter ()
  * Neighbourhood Model
  */
 
-bool reccommend::NeighbourhoodSolver::initData ()
-{
+bool reccommend::NeighbourhoodSolver::initData () {
     return IntegratedSolver::initData();
 }
 
-dtype reccommend::NeighbourhoodSolver::predict (int u, int i)
-{
+dtype reccommend::NeighbourhoodSolver::predict (int u, int i) {
     // Copy the explicit/implicit user rating indices vectors into local copies
     std::vector<int> explicitU(m_explicitU[u].size());
     std::copy(m_explicitU[u].begin(), m_explicitU[u].end(), explicitU.begin());
@@ -616,8 +596,7 @@ dtype reccommend::NeighbourhoodSolver::predict (int u, int i)
     return prediction;
 }
 
-bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i)
-{
+bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i) {
     // Copy the explicit/implicit user rating indices vectors into local copies
     std::vector<int> explicitU(m_explicitU[u].size());
     std::copy(m_explicitU[u].begin(), m_explicitU[u].end(), explicitU.begin());
