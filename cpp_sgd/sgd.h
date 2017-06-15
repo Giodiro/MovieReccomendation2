@@ -164,6 +164,12 @@ namespace reccommend {
     /**
      * stochastic gradient descent solver for the SVD problem
      * with added user and item biases.
+     * Used parameters:
+     * - num_factors
+     * - lrate1
+     * - lrate2
+     * - regl6
+     * - regl7
      */
     class SimpleSGDSolver : public SGDSolver {
     public:
@@ -191,6 +197,8 @@ namespace reccommend {
      * information. Such information is taken from test data, and consists
      * of presence or absence of a vote (which is the only thing we can obtain
      * from the test set).
+     * Used parameters:
+     * - all of SimpleSGDSolver
      */
     class SGDppSolver : public SimpleSGDSolver
     {
@@ -212,6 +220,13 @@ namespace reccommend {
 
     /**
      * Integrated model
+     * Used parameters:
+     * - num_factors
+     * - K1, K2
+     * - correlation_shrinkage (only when pearson corr is used)
+     * - max_neigh
+     * - lrate1, lrate2, lrate3
+     * - regl6, regl7, regl8
      */
     class IntegratedSolver : public SGDppSolver
     {
@@ -234,9 +249,18 @@ namespace reccommend {
         MatrixD m_w;
         MatrixD m_c;
         vector<vector<int>> m_explicitU;
-    private:
-        dtype calcPearson(int i1, int i2, int lambda2, 
-                                     const MatrixI &data);
+    };
+
+    class IntegratedPearsonSolver : public IntegratedSolver {
+    public:
+        IntegratedPearsonSolver(Settings settings, const MatrixI &train, const MatrixI &test)
+            : IntegratedSolver(settings, train, test, "pearson") {}
+    };
+
+    class IntegratedSpearmanSolver : public IntegratedSolver {
+    public:
+        IntegratedSpearmanSolver(Settings settings, const MatrixI &train, const MatrixI &test)
+            : IntegratedSolver(settings, train, test, "spearman") {}
     };
 
 
@@ -255,6 +279,18 @@ namespace reccommend {
         bool predictUpdate (int u, int i) override;
 
         void postIter () override;
+    };
+
+    class NeighbourhoodPearsonSolver : public NeighbourhoodSolver {
+    public:
+        NeighbourhoodPearsonSolver(Settings settings, const MatrixI &train, const MatrixI &test)
+            : NeighbourhoodSolver(settings, train, test, "pearson") {}
+    };
+
+    class NeighbourhoodSpearmanSolver : public NeighbourhoodSolver {
+    public:
+        NeighbourhoodSpearmanSolver(Settings settings, const MatrixI &train, const MatrixI &test)
+            : NeighbourhoodSolver(settings, train, test, "spearman") {}
     };
 
 }
