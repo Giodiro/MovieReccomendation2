@@ -88,6 +88,22 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     //solverList.emplace_back(std::unique_ptr<reccommend::SGDSolver>(new reccommend::SVD(settings, data.first, mask)));
 
+    std::cout << "******* Running Baseline Predictor *******\n";
+
+    test_score = reccommend::kfoldCV<reccommend::BiasPredictor>(k, settings, cv_data, 2);
+    std::cout << "test score: " << test_score << "\n";
+
+    if (doPrediction) {
+        auto solver = reccommend::BiasPredictor(settings, data.first, mask);
+        solver.run();
+        auto predictors = solver.predictors();
+        IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Bias_train.csv");
+        IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Bias_test.csv");
+        trainVec.push_back(solver.trainPredictor());
+        testVec.push_back(solver.testPredictor());
+    }
+    std::cout << "\n\n\n\n";
+
 
     std::cout << "******* Running SVD *******\n";
 
@@ -138,11 +154,11 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running IntegratedSolver (pearson) *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::IntegratedSolver>(k, settings, cv_data, 2);
+    test_score = reccommend::kfoldCV<reccommend::IntegratedPearsonSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
     if (doPrediction) {
-        auto solver = reccommend::IntegratedSolver(settings, data.first, mask, "pearson");
+        auto solver = reccommend::IntegratedPearsonSolver(settings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Integrated_pearson_train.csv");
@@ -154,11 +170,11 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running IntegratedSolver (spearman) *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::IntegratedSolver>(k, settings, cv_data, 2);
+    test_score = reccommend::kfoldCV<reccommend::IntegratedSpearmanSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
     if (doPrediction) {
-        auto solver = reccommend::IntegratedSolver(settings, data.first, mask, "spearman");
+        auto solver = reccommend::IntegratedSpearmanSolver(settings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Integrated_spearman_train.csv");
@@ -171,11 +187,11 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running NeighbourhoodSolver (pearson) *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::NeighbourhoodSolver>(k, settings, cv_data, 2);
+    test_score = reccommend::kfoldCV<reccommend::NeighbourhoodPearsonSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
     if (doPrediction) {
-        auto solver = reccommend::NeighbourhoodSolver(settings, data.first, mask, "pearson");
+        auto solver = reccommend::NeighbourhoodPearsonSolver(settings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Neighbourhood_pearson_train.csv");
@@ -186,11 +202,11 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running NeighbourhoodSolver (spearman) *******\n";
         
-    test_score = reccommend::kfoldCV<reccommend::NeighbourhoodSolver>(k, settings, cv_data, 2);
+    test_score = reccommend::kfoldCV<reccommend::NeighbourhoodSpearmanSolver>(k, settings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
     if (doPrediction) {
-        auto solver = reccommend::NeighbourhoodSolver(settings, data.first, mask, "spearman");
+        auto solver = reccommend::NeighbourhoodSpearmanSolver(settings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Neighbourhood_spearman_train.csv");
