@@ -1,6 +1,6 @@
 // uncomment to disable assert()
-// #define NDEBUG
-// #define EIGEN_NO_DEBUG
+#define NDEBUG
+#define EIGEN_NO_DEBUG
 #include <string>
 #include <iostream>
 #include <stdexcept>
@@ -46,6 +46,15 @@ const static Settings DEFAULT_SETTINGS = {
     {"max_neigh", 264},
 };
 
+const static Settings SVD_SETTINGS = {
+    {"nusers", NUSERS},
+    {"nitems", NITEMS},
+    {"num_factors", 15},
+    {"K1", 1},
+    {"K2", 21},
+    {"max_iter", 1},
+};
+
 
 void runAllClassif(const int num_threads, const ulong rseed,
                    const std::string submission_file,
@@ -64,6 +73,9 @@ void runAllClassif(const int num_threads, const ulong rseed,
 {
     Settings settings = Settings(DEFAULT_SETTINGS);
     settings["num_threads"] = num_threads;
+
+    Settings svdSettings = Settings(SVD_SETTINGS);
+    svdSettings["num_threads"] = num_threads;
 
     int k = 3;
     MatrixI mask;
@@ -90,11 +102,12 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running Baseline Predictor *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::BiasPredictor>(k, settings, cv_data, 2);
+    // Use same settings as SVD settings (K1 and K2 are the only things needed here)
+    test_score = reccommend::kfoldCV<reccommend::BiasPredictor>(k, svdSettings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
     if (doPrediction) {
-        auto solver = reccommend::BiasPredictor(settings, data.first, mask);
+        auto solver = reccommend::BiasPredictor(svdSettings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Bias_train.csv");
@@ -107,11 +120,11 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running SVD *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::SVD>(k, settings, cv_data, 2);
+    test_score = reccommend::kfoldCV<reccommend::SVD>(k, svdSettings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
     if (doPrediction) {
-        auto solver = reccommend::SVD(settings, data.first, mask);
+        auto solver = reccommend::SVD(svdSettings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_SVD_train.csv");
