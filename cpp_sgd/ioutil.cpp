@@ -1,13 +1,19 @@
-#include "ioutil.h"
-#include <random>
-#include <fstream>
+/**
+ * Implementation of ioutil.h
+ *
+ * author: gmeanti
+ */
 #include <iostream>
-#include <stdexcept>
+#include <random>     // std::mt19937
+#include <fstream>    // std::ifstream, std::ofstream
+#include <utility>    // std::pair
+#include <stdexcept>  // std::runtime_error
+
+#include "ioutil.h"
 
 using std::string;
 using std::pair;
 using std::cout;
-using reccommend::IOUtil;
 using reccommend::MatrixI;
 using reccommend::MatrixD;
 using reccommend::DataPair;
@@ -70,7 +76,7 @@ DataPair reccommend::IOUtil::readData(string fileName, double testPercentage,
 }
 
 
-std::vector < pair < MatrixI, MatrixI > > reccommend::IOUtil::readDataCV (
+std::vector < DataPair > reccommend::IOUtil::readDataCV (
             string filename,
             int k_cv,
             int nusers,
@@ -79,7 +85,7 @@ std::vector < pair < MatrixI, MatrixI > > reccommend::IOUtil::readDataCV (
             unsigned long seed)
 {
     // Initialize data containers
-    std::vector < pair < MatrixI, MatrixI > > dataVec (k_cv);
+    std::vector<DataPair> dataVec (k_cv);
 
     // Read the data into a single matrix
     auto initData = readData(filename, 0.0, nusers, nitems, seed).first;
