@@ -1,18 +1,27 @@
+/**  mpi_main.cpp
+ * Main program for running random parameter search with different solvers.
+ * Random parameter search was preferred to grid search (see TODO: insert appropriate reference)
+ * The search is performed in parallel using the MPI framework:
+ *  - a master task dispatches new (random) configurations to the slave tasks, which report on the obtained cross validation scores.
+ *    The master is also responsible for writing the obtained results to file.
+ *  - multiple slave tasks read configurations sent from the master and execute the desired solver.
+ *
+ * The files obtained with the parameter search can then be analyzed to obtain a picture of which parameters
+ * influence the score, and what the optimal choices are.
+ *
+ * Parameters:
+ * A single command line parameter is implemented which allows to choose the solver.
+ * Possible solvers are "integrated", "simple", "SVD" and "SVD++".
+ *
+ * Author: gmeanti
+ */
 #include <unordered_map>
 #include <string>
-#include <iostream>
+#include <iostream>     // output
 #include <fstream>      // std::ofstream
-#include <sstream>
-#include <memory>
-#include <chrono>       // time measurements
-#include <ctime>
-#include <random>
-#include <iterator>
 
-// uncomment to disable assert()
+// uncomment to disable asserts in Eigen
 // #define NDEBUG
-#include <cassert>
-
 // 3rd party libraries (eigen and OpenMPI)
 #include <Eigen/Dense>
 #include <mpi.h>
@@ -31,17 +40,10 @@
 #define NEW_TASK_TAG 4
 #define DIE_TAG 5
 
-#define DEFAULT_BAD_SCORE 10000
-#define WRITE_CONFIG_EVERY 50
-#define CV_TEST_PERCENT 0.1
-#define CV_K 3
-
+// Types from sgd_types.h used in this file
 using reccommend::dtype;
-using reccommend::MatrixI;
-using reccommend::MatrixD;
 using reccommend::Settings;
 using reccommend::SettingsEntry;
-using reccommend::DataPair;
 using reccommend::IOUtil;
 
 // Variant type. Defines the possibilities for the parameter search 
@@ -54,13 +56,24 @@ using config_var = variant<std::pair<dtype, dtype>, // Ranges of floats and ints
 using config_val = variant<dtype, int>;
 
 typedef std::unordered_map<std::string, config_var> SettingsRange;
-
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
 
 const static int NUSERS = 10000;
 const static int NITEMS = 1000;
+/* Program parameters */
+const static int CV_K = 3;  /* How many folds for cross validation */
+const static float CV_TEST_PERCENT = 0.1;  /* How much validation data to use during cross validation */
+const static int WRITE_CONFIG_EVERY = 50;  /* How often to save the program's state to disk */
+const static int DEFAULT_BAD_SCORE = 10000;  /* Default score for failed solver runs (e.g. for too large learning rates) */
+/* Used file paths */
 const static std::string TRAIN_DATA_FILE = "../data_train.csv";
 const static std::string MASK_DATA_FILE = "../sampleSubmission.csv";
+const static std::string SAVE_DIR = "/cluster/home/gmeanti/MovieReccomendation2/saved_data"; // Assume on Euler
 
+/**
+ * Returns a string explaining the program's command line arguments
+ */
+std::string usageString();
 
 /**
  * Choose a random value within the allowed range (or list of allowed values)
@@ -145,6 +158,11 @@ bool write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbeg
                          std::vector<std::pair<Settings, double>>::iterator cend,
                          std::string fname);
 
+/**** IMPLEMENTATION ****/  
+
+std::string usageString() {
+    return "MPI_SGD <integrated>|<svd>";
+}
 
 config_val chooseParamValue(config_var param, std::mt19937 &rng)
 {
@@ -459,86 +477,6 @@ Settings recvConfig(int rank)
 }
 
 
-
-int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
- 
-    // Force flushing of output
-    std::cout.setf( std::ios_base::unitbuf );
-
-    unsigned long rseed = 18351;
-    unsigned long data_rseed = 1633419;
-    int           num_threads = 1;
-    int           rank;
-    std::string   save_folder = "/cluster/home/gmeanti/MovieReccomendation2/saved_data/";
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    /* Read command line argument */
-    std::string searchType;
-    if (argc > 1) {
-        searchType = argv[1];
-    } else {
-        std::cout << "No argument found for 'search type'. Please specify a command line argument:\n"
-                  << "MPI_SGD <integrated>|<svd>\n";
-        return 1;
-    }
-
-
-    if (rank == 0) { /* Master routine */
-        SettingsRange min_max_config;
-        std::string   save_file;
-        int           max_tasks;
-        if (searchType == "integrated") {
-            min_max_config = getIntegratedConfig(num_threads);
-            save_file = save_folder + "/integrated_rsearch_configs.csv";
-            max_tasks = 2000;
-        }
-        else if (searchType == "svd") {
-            min_max_config = getSVDConfig(num_threads);
-            save_file = save_folder + "/svd_rsearch_configs.csv";
-            max_tasks = 20000;
-        }
-        else if (searchType == "simple") {
-            min_max_config = getSimpleConfig(num_threads);
-            save_file = save_folder + "/simple_rsearch_configs.csv";
-            max_tasks = 10000;
-        }
-        else if (searchType == "SVD++") {
-            min_max_config = getSGDppConfig(num_threads);
-            save_file = save_folder + "/SVD++_rsearch_configs.csv";
-            max_tasks = 5000;
-        }
-        else {
-            std::cout << "Chosen search type (" << searchType << ") is not valid." << "\n";
-            return 2;
-        }
-        master (min_max_config, rseed, max_tasks, save_file);
-    }
-    else { /* Slave routine */
-        if (searchType == "integrated") {
-            slave<reccommend::IntegratedPearsonSolver> (data_rseed);
-        }
-        else if (searchType == "svd") {
-            slave<reccommend::SVD> (data_rseed);
-        }
-        else if (searchType == "simple") {
-            slave<reccommend::SimpleSGDSolver> (data_rseed);
-        }
-        else if (searchType == "SVD++") {
-            slave<reccommend::SGDppSolver> (data_rseed);
-        }
-        else {
-            std::cout << "Chosen search type (" << searchType << ") is not valid." << "\n";
-            return 2;
-        }
-    }
-    MPI_Finalize();
-    return 0;
-}
-
-
-
 bool write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbegin, 
     std::vector<std::pair<Settings, double>>::iterator cend,
     std::string fname) 
@@ -567,7 +505,82 @@ bool write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbeg
 }
 
 
-typedef std::chrono::time_point<std::chrono::high_resolution_clock> dTimePoint;
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+ 
+    // Force flushing of output
+    std::cout.setf( std::ios_base::unitbuf );
+
+    unsigned long rseed = 18351;
+    unsigned long data_rseed = 1633419;
+    int           num_threads = 1; /* Force solvers to use a single thread */
+    int           rank;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* Read command line argument */
+    std::string searchType;
+    if (argc > 1) {
+        searchType = argv[1];
+    } else {
+        std::cout << "No argument was supplied. Please specify a command line argument:\n";
+        std::cout << usageString() << "\n";
+        return 1;
+    }
+
+
+    if (rank == 0) { /* Master routine */
+        SettingsRange min_max_config;
+        std::string   save_file;
+        int           max_tasks;
+        if (searchType == "integrated") {
+            min_max_config = getIntegratedConfig(num_threads);
+            save_file = SAVE_DIR + "/integrated_rsearch_configs.csv";
+            max_tasks = 2000;
+        }
+        else if (searchType == "svd") {
+            min_max_config = getSVDConfig(num_threads);
+            save_file = SAVE_DIR + "/svd_rsearch_configs.csv";
+            max_tasks = 20000;
+        }
+        else if (searchType == "simple") {
+            min_max_config = getSimpleConfig(num_threads);
+            save_file = SAVE_DIR + "/simple_rsearch_configs.csv";
+            max_tasks = 10000;
+        }
+        else if (searchType == "SVD++") {
+            min_max_config = getSGDppConfig(num_threads);
+            save_file = SAVE_DIR + "/SVD++_rsearch_configs.csv";
+            max_tasks = 5000;
+        }
+        else {
+            std::cout << "Search type " << searchType << " is not implemented." << "\n";
+            std::cout << usageString() << "\n";
+            return 2;
+        }
+        master (min_max_config, rseed, max_tasks, save_file);
+    }
+    else { /* Slave routine */
+        if (searchType == "integrated") {
+            slave<reccommend::IntegratedPearsonSolver> (data_rseed);
+        }
+        else if (searchType == "svd") {
+            slave<reccommend::SVD> (data_rseed);
+        }
+        else if (searchType == "simple") {
+            slave<reccommend::SimpleSGDSolver> (data_rseed);
+        }
+        else if (searchType == "SVD++") {
+            slave<reccommend::SGDppSolver> (data_rseed);
+        }
+        else {
+            return 2;
+        }
+    }
+    MPI_Finalize();
+    return 0;
+}
+
 
 void master (SettingsRange &min_max_config, 
     unsigned long rseed,
@@ -577,10 +590,10 @@ void master (SettingsRange &min_max_config,
     MPI_Status     status;
     int            ntasks;
     MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
-    uint           sent_tasks = 1;
+    uint           sent_tasks = 0, recv_tasks = 0;
     std::vector<std::pair<Settings, double>> config_scores;
     double         best_score = DEFAULT_BAD_SCORE;
-    std::unordered_map<int, dTimePoint> task_start;
+    std::unordered_map<int, TimePoint> task_start;
     
     /*
      * Generate initial configuration
@@ -609,15 +622,16 @@ void master (SettingsRange &min_max_config,
         sendConfig(curr_config, rank);
 
         task_start[rank] = std::chrono::high_resolution_clock::now();
-        std::cout << reccommend::now() << "Sent task " << sent_tasks << " to node " << rank << "\n";
         sent_tasks++;
+        std::cout << reccommend::now() << "Sent task " << sent_tasks << " to node " << rank << "\n";
     }
 
     /*
      * Receive a result from any slave;
      * Dispatch a new config to the slaves which are finished.
      */
-    while (sent_tasks <= max_tasks) {
+    while (recv_tasks <= max_tasks) {
+        // Write results to disk
         if (config_scores.size() > 0 && config_scores.size() % WRITE_CONFIG_EVERY == 0) {
             if(write_config_to_csv(config_scores.end()-WRITE_CONFIG_EVERY,
                                    config_scores.end(),
@@ -627,13 +641,15 @@ void master (SettingsRange &min_max_config,
                 std::cout << "Failed to write config data to " << config_save_file << "\n";
             }
         }
+        // Receive task result
         double test_score;
         MPI_Recv( &test_score, 1, MPI_DOUBLE, MPI_ANY_SOURCE, SCORE_TAG, MPI_COMM_WORLD, &status);
         int source = status.MPI_SOURCE;
         auto rconfig = recvConfig(source);
+        recv_tasks++;
 
         // Report & Store obtained results.
-        if (test_score != test_score) {
+        if (test_score != test_score) { // true when score is NaN
             test_score = DEFAULT_BAD_SCORE;
         }
         std::cout << reccommend::now() << "Received task from " << source
@@ -653,15 +669,17 @@ void master (SettingsRange &min_max_config,
         }
 
         // Send new task
-        auto nparam = nextConfig(min_max_config, rng);
-        curr_config[nparam.first] = nparam.second;
+        if (sent_tasks <= max_tasks) {
+            auto nparam = nextConfig(min_max_config, rng);
+            curr_config[nparam.first] = nparam.second;
 
-        MPI_Send(0, 0, MPI_INT, source, NEW_TASK_TAG, MPI_COMM_WORLD);
-        sendConfig(curr_config, source);
+            MPI_Send(0, 0, MPI_INT, source, NEW_TASK_TAG, MPI_COMM_WORLD);
+            sendConfig(curr_config, source);
 
-        task_start[source] = std::chrono::high_resolution_clock::now();
-        std::cout << reccommend::now() << "Sent task " << sent_tasks << " to " << source << "\n";
-        sent_tasks++;
+            task_start[source] = std::chrono::high_resolution_clock::now();
+            sent_tasks++;
+            std::cout << reccommend::now() << "Sent task " << sent_tasks << " to " << source << "\n";
+        }
     }
 
     /*
@@ -680,7 +698,7 @@ void slave (ulong data_rseed)
     int        len;
     double     test_score;
 
-    // Read Data
+    /* Read data for cross validation */
     auto cv_data = IOUtil::readDataCV(TRAIN_DATA_FILE, CV_K, NUSERS, NITEMS, CV_TEST_PERCENT, data_rseed);
 
     while (true) {
