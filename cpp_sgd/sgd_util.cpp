@@ -1,23 +1,21 @@
+/**
+ * Implementation of sgd_util.h
+ *
+ * author: gmeanti
+ */
 #include <cmath>         // abs, sqrt
 #include <algorithm>     // min, set_intersection
 
-#include <Eigen/Dense>
-
 #include "sgd_util.h"
 #include "sgd_types.h"
-
 
 using reccommend::dtype;
 using reccommend::MatrixD;
 using reccommend::MatrixI;
 using reccommend::ColVectorD;
 using reccommend::ColVectorI;
-using reccommend::RowVectorD;
 
-
-dtype _calcPearson(const int i1, const int i2, 
-                   const int lambda2, const MatrixI &data) 
-{
+dtype _calcPearson(const int i1, const int i2, const int lambda2, const MatrixI &data) {
     // Use formula (single pass) from
     // https://en.wikipedia.org/wiki/Pearson_correlation_coefficient#Definition
     int inter_len = 0;
@@ -69,6 +67,7 @@ ColVectorD _rank(const ColVectorI &v) {
     }
     return r;
 }
+
 
 dtype _calcSpearman(const int i1, const int i2, const MatrixI &data) {
     // Need to find indices of users which have rated both items (`nonzero`).
@@ -142,7 +141,6 @@ MatrixD reccommend::calcPearsonMatrix(const MatrixI &data, const int shrinkage, 
 }
 
 
-
 dtype reccommend::calcGlobalMean (const MatrixI &data, const std::vector<std::pair<int, int> > &dataIndices) {
     dtype mean = 0;
     for (auto it = dataIndices.begin(); it != dataIndices.end(); ++it) {
@@ -151,7 +149,6 @@ dtype reccommend::calcGlobalMean (const MatrixI &data, const std::vector<std::pa
     mean /= dataIndices.size();
     return mean;
 }
-
 
 
 MatrixD reccommend::calcBiasMatrix (const MatrixI &data, const dtype globalMean, const int K1, const int K2) {
