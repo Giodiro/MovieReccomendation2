@@ -1,3 +1,11 @@
+/**
+ * Helper functions related to evaluation of solver algorithms.
+ * Currently only 2 functions are implemented:
+ *  - getScores is very simple and obtains the scores of training and validation predictors in a solver.
+ *  - kfoldCV performs k-fold cross validation with a specified solver class.
+ */
+#ifndef __EVALUATION_H
+#define __EVALUATION_H
 #include <utility>      // pair
 #include <vector>
 
@@ -25,3 +33,4 @@ namespace reccommend {
                    const int verbose);
 
 }
+#endif
