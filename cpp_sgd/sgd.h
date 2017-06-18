@@ -14,6 +14,8 @@
  *  - NeighbourhoodSolver: implements a neighbourhood model where we take into account the correlation between
  *      different feature vectors in the data. This does not come from an SVD solution like the other models.
  *  - IntegratedSolver: integrates the SVD++ and the neighbourhood models.
+ *
+ * author: gmeanti
  */
 
 #ifndef __SGD_H

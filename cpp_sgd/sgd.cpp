@@ -1,3 +1,8 @@
+/**
+ * Implementation file for sgd.h
+ *
+ * author: gmeanti
+ */
 #include <iostream>
 #include <cmath>        // pow, sqrt, abs
 #include <random>
@@ -119,7 +124,7 @@ SGDSolver& reccommend::SGDSolver::run () {
                 curUpdate = update;
                 if (curUpdate % mod_iter == 0) {
                     #ifdef PARALLEL_REPORT
-                        cout << "Update " << curUpdate << " - "
+                        cout << reccommend::now() << "Update " << curUpdate << " - "
                              << "Full iteration " << (curUpdate / mod_iter)
                              << " finished. (" << static_cast<int>(static_cast<float>(curUpdate) / max_updates * 100)
                              << "%) - took " << reccommend::elapsed(start) << "ms\n";
