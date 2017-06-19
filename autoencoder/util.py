@@ -27,16 +27,16 @@ def read_data(use_mask=False, test_percentage=0.2, dataset="CF"):
             "movielens" which uses the movielens 1m dataset, or "CF" which uses the
             in-class dataset.
     """
-    if dataset.tolower() == "cf":
+    if dataset.lower() == "cf":
         if use_mask:
-            M = _read_mask(MASK_DATA_FILE)
-            A = _read_data(TRAIN_DATA_FILE, 0)
+            M = _read_mask(MASK_DATA_FILE, 10000, 1000)
+            A = _read_data(TRAIN_DATA_FILE, 0, 10000, 1000)
             return (A, None, M)
         else:
-            (Atr, Ats, Mts) = _read_data(TRAIN_DATA_FILE, test_percentage)
+            (Atr, Ats, Mts) = _read_data(TRAIN_DATA_FILE, test_percentage, 10000, 1000)
             return (Atr, Ats, Mts)
-    elif dataset.tolower() == "movielens":
-        (Atr, Ats, Mts) = _read_data(MOVIELENS_DATA_FILE, test_percentage)
+    elif dataset.lower() == "movielens":
+        (Atr, Ats, Mts) = _read_data(MOVIELENS_DATA_FILE, test_percentage, 6040, 3952)
         return (Atr, Ats, Mts)
     else:
         print("%s dataset %s is not implemented" % (get_time(), dataset))
@@ -67,9 +67,7 @@ def __extract_line_data(l):
     return (row, col, val)
 
 
-def _read_data(file_name, test_percentage):
-    nusers = 10000
-    nitems = 1000
+def _read_data(file_name, test_percentage, nusers, nitems):
     matrix_size = (nusers, nitems)
     Atr = np.zeros(matrix_size, dtype="int")
     
@@ -94,9 +92,7 @@ def _read_data(file_name, test_percentage):
     return Atr
 
 
-def _read_mask(file_name):
-    nusers = 10000
-    nitems = 1000
+def _read_mask(file_name, nusers, nitems):
     matrix_size = (nusers, nitems)
     with open(file_name, 'r') as fh:
         data = fh.readlines()
