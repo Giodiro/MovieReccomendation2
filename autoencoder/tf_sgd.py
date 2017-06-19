@@ -424,13 +424,13 @@ def main_stacked():
 
                             step = ibatch * sett["batch_size"]
                             if step % sett["report_every"] == 0:
-                                cost, predictions, summary = model.partial_fit_summary(s, batch_data, batch_missing)
+                                cost, predictions, summary = model.fit_summary(s, batch_data, batch_missing)
                                 summary_writer.add_summary(summary, step * (epoch+1))
                                 summary_writer.flush()
                                 print("%s step %d, epoch %d -- loss=%f" % (
                                     util.get_time(), step, epoch, cost))
                             else:
-                                cost, predictions = model.partial_fit(s, batch_data, batch_missing)
+                                cost, predictions = model.fit(s, batch_data, batch_missing)
                     # Save this model
                     save_path = model.save_model(s)
                     print("%s Model saved in file %s" % (util.get_time(), save_path))
@@ -458,7 +458,7 @@ def main_stacked():
                     
                     step = ibatch * sett["batch_size"]
                     if step % sett["report_every"] == 0:
-                        cost, predictions, summary = ref_model.partial_fit_summary(s, batch_data, batch_missing)
+                        cost, predictions, summary = ref_model.fit_summary(s, batch_data, batch_missing)
                         summary_writer.add_summary(summary, step * (epoch+1))
                         summary_writer.flush()
                         ts_err = np.NaN
@@ -471,27 +471,35 @@ def main_stacked():
                             error(predictions, batch_data, batch_missing),
                             ts_err))
                     else:
-                        cost, predictions = ref_model.partial_fit(s, batch_data, batch_missing)
+                        cost, predictions = ref_model.fit(s, batch_data, batch_missing)
 
             # Save this model
             save_path = ref_model.save_model(s)
             print("%s Model saved in file %s" % (util.get_time(), save_path))
 
 
-def main(sett, data_axis=0, make_predictions=False):
+def main(sett, data_axis=0, make_predictions=False, dataset="CF"):
+    """Train the denosing autoencoder for CF
+    @param sett: dictionary of settings
+    @param data_axis: whether to train a U-autoencoder (for users, data_axis=0)
+            or I-autoencoder for items, data_axis=1
+    @param make_predictions: whether to make predictions and write them to file or not.
+            If not will use 10% of the training data to perform validation.
+    """
     if data_axis == 0:
         train_size = sett["nusers"]
         feature_size = sett["nitems"]
     else:
         train_size = sett["nitems"]
         feature_size = sett["nusers"]
-
     if make_predictions:
-        tr, _, ts = util.read_data(use_mask=True)
+        if dataset != "CF":
+            raise ValueError("%s Cannot make predictions with dataset %s" % (util.get_time(), dataset))
+        tr, _, ts = util.read_data(use_mask=True, dataset=dataset)
     else:
-        tr, ts, msk = util.read_data(use_mask=False, test_percentage=0.1)
+        tr, ts, msk = util.read_data(use_mask=False, test_percentage=0.1, dataset=dataset)
 
-    print("%s read data." % (util.get_time()))
+    print("%s read data from dataset %s" % (util.get_time(), dataset))
     tr, m_tr = prepare_data(tr, data_axis)
     ts, m_ts = prepare_data(ts, data_axis)
     if (data_axis == 1):
@@ -499,7 +507,7 @@ def main(sett, data_axis=0, make_predictions=False):
         m_tr = m_tr.T
         ts = ts.T
         m_ts = m_ts.T
-    print("%s prepared data." % util.get_time())
+    print("%s prepared data." % (util.get_time()))
 
 
     batch = tf.Variable(0) # global step of the optimizer
@@ -524,36 +532,37 @@ def main(sett, data_axis=0, make_predictions=False):
                                  beta_weight=sett["beta"],
                                  regl_weight=sett["regularization"],
                                  optimizer=optimizer,
+                                 rseed=381328,
                                  batch=batch)
 
     batch_size = sett["batch_size"]
+    train_indices = range(train_size)
 
     with tf.Session() as s:
         init = tf.global_variables_initializer()
         s.run(init)
-
         summary_writer = tf.summary.FileWriter(sett["log_dir"], graph=s.graph)
 
-        train_indices = range(train_size)
-
         for epoch in range(sett["num_epochs"]):
-            print("Epoch %d" % epoch)
+            print("%s Epoch %d" % (util.get_time(), epoch))
+            # Randomize order of data samples at each epoch
             perm_indices = np.random.permutation(train_indices)
+            # Index of data sample in this epoch
             run_index = 0
 
             for ibatch in range(train_size // batch_size):
                 data_offset = (ibatch * batch_size) % (train_size - batch_size)
                 batch_indices = perm_indices[data_offset:(data_offset+batch_size)]
                 # Data for this batch
-                batch_X = tr.take(batch_indices, 0) ## TODO: change this to normal indexing
-                batch_missing = m_tr.take(batch_indices, 0)
+                batch_X = tr[batch_indices,:]
+                batch_missing = m_tr[batch_indices,:]
 
                 run_index += batch_size
 
                 if run_index % sett["report_every"] == 0:
-                    # Output summary
-                    cost, predictions, trerr, tserr, summary = \
-                        model.partial_fit_summary(s, tr, m_tr, ts, m_ts)
+                    # print update and save summary for tensorboard
+                    cost, trerr, tserr, summary = \
+                        model.fit_summary(s, tr, m_tr, ts, m_ts)
 
                     print("%s step %d -- loss=%f -- train error=%f -- test error=%f" %
                         (util.get_time(), run_index, cost, trerr, tserr))
@@ -563,9 +572,9 @@ def main(sett, data_axis=0, make_predictions=False):
                     sys.stdout.flush()
                 else:
                     # Perform training
-                    cost, predictions = model.partial_fit(s, batch_X, batch_missing)
+                    cost = model.fit(s, batch_X, batch_missing)
 
-        # Make predictions
+        # Make predictions and write them to file.
         if make_predictions:
             print("%s Making final predictions" % (util.get_time()))
             preds = model.predictions(s, tr)
@@ -579,6 +588,8 @@ def main(sett, data_axis=0, make_predictions=False):
             util.write_predict(lambda u, i: ts_pred[u, i], np.invert(m_ts), sett["prediction_file"] + "_test.csv")
             util.write_predict(lambda u, i: tr_pred[u, i], np.invert(m_tr), sett["prediction_file"] + "_train.csv")
             print("%s Predictions written to %s" % (util.get_time(), sett["prediction_file"]))
+
+
 
 if __name__ == "__main__":
     print("%s tf_sgd started" % (util.get_time()))
