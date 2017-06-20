@@ -277,6 +277,8 @@ bool reccommend::SGDppSolver::initData () {
     for (uint u = 0; u < m_train.rows(); ++u) {
         vector<int> imp;
         for (uint i = 0; i < m_train.cols(); ++i) {
+            // Incorporation of implicit data (rated-not rated).
+            // Not sure if using test data as well will cause issues with overfitting?
             if (m_train(u, i) > 0 || m_test(u, i) > 0) {
                 imp.push_back(i);
             }
@@ -442,7 +444,6 @@ dtype reccommend::IntegratedSolver::predict (int u, int i) {
                         n_impl * implicit_sum;
     return prediction;
 }
-
 
 bool reccommend::IntegratedSolver::predictUpdate (int u, int i) {
     /*
@@ -658,7 +659,6 @@ bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i) {
     }
     return true;
 }
-
 
 void reccommend::NeighbourhoodSolver::postIter () {
     IntegratedSolver::postIter();
