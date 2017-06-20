@@ -7,6 +7,15 @@ import tensorflow as tf
 import sys
 import os
 
+"""Implementation of a stacked autoencoder.
+
+This was not used for final predictions so the code is very rough, 
+and probably won't run without errors.
+
+@author: gmeanti
+"""
+
+
 def getLayerName(hl):
     return "hl_%d" % hl
 
@@ -214,39 +223,6 @@ class StackedDenoisingAutoencoder:
     def restore_model(self, sess):
         return self.saver.restore(sess, self.saver_filename)
 
-
-
-def prepare_data(X, mean_by=0):
-    """Center around 0, mean center, and extract the missing value indices
-    Params:
-      X: input data matrix (nusers x nitems)
-      mean_by: axis which contains the features 
-               (either users: 0, or items: 1)
-    Returns:
-      (X_prepared, missing_indices)
-    """
-
-    # Extract missing value indices:
-    maskedX = np.ma.array(X, mask=(X == 0), dtype="float32") # mask out the missing values
-
-    # Values should be in [-1, 1] range (normally values are between 1 and 5)
-    maskedX = (maskedX-3)/2
-
-    # Mean center the values. Must be careful to only mean center the values
-    # which are not in missing
-    #maskedX = np.ma.apply_along_axis(lambda a: a - np.ma.mean(a),
-    #                                                axis=mean_by,
-    #                                                arr=maskedX)
-
-    print("min: %f - mean: %f - std: %f - max: %f" % 
-          (np.min(maskedX), np.mean(maskedX), np.std(maskedX), np.max(maskedX)))
-
-    return (maskedX.data, maskedX.mask)
-
-def untransform_data(X, mask):
-    maskedX = np.ma.array(X, mask=mask) # mask out the missing values
-    maskedX = maskedX*2+3
-    return maskedX.data
 
 def error(preds, truth, mask):
     """RMSE"""

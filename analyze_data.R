@@ -1,3 +1,11 @@
+###
+# R script to analyze the output of parameter searches
+# The analysis mainly consists of looking at the output of "pairs" plots,
+# and explaining the visible correlations of parameters with score.
+#
+# @author: gmeanti
+###
+
 require(sfsmisc)
 require(mgcv)
 svd_file <- "/home/giodiro/Desktop/CIL/exercises/ex2copy/saved_data/rsearch/svd_rsearch_configs.csv"
@@ -59,7 +67,8 @@ pairs(data.svd, gap=0, pch=18)
 
 
 ### Other random cruft
-#data.used <- subset(data, select=-c(correlation_shrinkage, num_threads, nusers, nitems, K1, K2))
+#
+#
 data.used <- subset(data, select=-c(max_iter, num_threads, nusers, nitems))
 data.scoring <- subset(data.used, select=-c(score))
 data.scoring$score <- factor(data$score > 10, labels = c("low", "high"))

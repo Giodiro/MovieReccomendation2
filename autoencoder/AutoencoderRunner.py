@@ -1,13 +1,23 @@
-import util
-from MaskedDenoisingAutoencoder import DenoisingAutoencoder
+import sys
+import os
 
 import numpy as np
 import sklearn
 import tensorflow as tf
 
-import sys
-import os
+import util
+from MaskedDenoisingAutoencoder import DenoisingAutoencoder
 
+
+""" Main file to run predictions with autoencoders.
+Data preprocessing consists of normalizing the ratings within the -1, 1 range
+which is needed since we use the tanh transfer function. 
+This is similar to mean-centering the data.
+The train_autoencoder function is responsible for training and making predictions.
+It consists mainly of boilerplate code.
+
+@author: gmeanti
+"""
 
 
 def prepare_data(X, mean_by=0):
@@ -36,6 +46,7 @@ def prepare_data(X, mean_by=0):
           (np.min(maskedX), np.mean(maskedX), np.std(maskedX), np.max(maskedX)))
 
     return (maskedX.data, maskedX.mask)
+
 
 def untransform_data(X, mask):
     maskedX = np.ma.array(X, mask=mask) # mask out the missing values

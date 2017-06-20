@@ -8,8 +8,18 @@ from bayes_opt import BayesianOptimization
 import util
 import AutoencoderRunner
 
-SAVE_PATH = "../saved_data/bayes_opt/results.csv"
+"""Run a Bayesian Optimization hyperparameter search
+The library used is quite simple compared to other possibilities,
+and is found here: https://github.com/fmfn/BayesianOptimization
 
+This file is not well coded and configurable.
+The target function evaluates one point in the parameter search
+"""
+
+
+SAVE_PATH = "./saved_data/bayes_opt/results.csv"
+
+# Lower and upper bounds for mutable parameters
 mut_settings = {
     "hidden_size": [10, 100],
     "learning_rate": [0.0005, 0.1],
@@ -23,6 +33,7 @@ mut_settings = {
     "regularization": [0.1, 100.0],
 }
 
+# Parameters for the gaussian process
 gp_params = {"alpha": 1e-4}
 
 

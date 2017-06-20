@@ -21,7 +21,6 @@ class DenoisingAutoencoder:
     in the gradient propagation procedure.
     However no optimizations taking advantage of the input sparsity have been applied (TODO)
 
-
     Transfer function: tanh
     Layers: 1 hidden layer of size `n_hidden`
     """

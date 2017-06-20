@@ -8,6 +8,11 @@ import time
 import numpy as np
 
 
+"""Utility functions for parsing and writing data to file.
+
+@author: gmeanti
+"""
+
 SUBMIT_FOLDER   = "../saved_data/submissions"
 TRAIN_DATA_FILE = "../data_train.csv"
 MASK_DATA_FILE  = "../sampleSubmission.csv"
