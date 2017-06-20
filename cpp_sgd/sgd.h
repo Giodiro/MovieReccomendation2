@@ -14,6 +14,8 @@
  *  - NeighbourhoodSolver: implements a neighbourhood model where we take into account the correlation between
  *      different feature vectors in the data. This does not come from an SVD solution like the other models.
  *  - IntegratedSolver: integrates the SVD++ and the neighbourhood models.
+ *
+ * author: gmeanti
  */
 
 #ifndef __SGD_H
@@ -222,7 +224,7 @@ namespace reccommend {
      * Integrated model
      * Used parameters:
      * - num_factors
-     * - K1, K2
+     * - K1, K2 (for bias)
      * - correlation_shrinkage (only when pearson corr is used)
      * - max_neigh
      * - lrate1, lrate2, lrate3
@@ -266,6 +268,13 @@ namespace reccommend {
 
     /**
      * Neighbourhood model
+     * Used parameters:
+     * - num_factors
+     * - K1, K2 (for bias)
+     * - correlation_shrinkage (only when pearson corr is used)
+     * - max_neigh
+     * - lrate1, lrate3
+     * - regl4, regl6
      */
     class NeighbourhoodSolver : public IntegratedSolver
     {

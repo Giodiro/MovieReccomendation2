@@ -1,3 +1,8 @@
+/**
+ * Implementation file for sgd.h
+ *
+ * author: gmeanti
+ */
 #include <iostream>
 #include <cmath>        // pow, sqrt, abs
 #include <random>
@@ -119,7 +124,7 @@ SGDSolver& reccommend::SGDSolver::run () {
                 curUpdate = update;
                 if (curUpdate % mod_iter == 0) {
                     #ifdef PARALLEL_REPORT
-                        cout << "Update " << curUpdate << " - "
+                        cout << reccommend::now() << "Update " << curUpdate << " - "
                              << "Full iteration " << (curUpdate / mod_iter)
                              << " finished. (" << static_cast<int>(static_cast<float>(curUpdate) / max_updates * 100)
                              << "%) - took " << reccommend::elapsed(start) << "ms\n";
@@ -272,6 +277,8 @@ bool reccommend::SGDppSolver::initData () {
     for (uint u = 0; u < m_train.rows(); ++u) {
         vector<int> imp;
         for (uint i = 0; i < m_train.cols(); ++i) {
+            // Incorporation of implicit data (rated-not rated).
+            // Not sure if using test data as well will cause issues with overfitting?
             if (m_train(u, i) > 0 || m_test(u, i) > 0) {
                 imp.push_back(i);
             }
@@ -437,7 +444,6 @@ dtype reccommend::IntegratedSolver::predict (int u, int i) {
                         n_impl * implicit_sum;
     return prediction;
 }
-
 
 bool reccommend::IntegratedSolver::predictUpdate (int u, int i) {
     /*
@@ -653,7 +659,6 @@ bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i) {
     }
     return true;
 }
-
 
 void reccommend::NeighbourhoodSolver::postIter () {
     IntegratedSolver::postIter();

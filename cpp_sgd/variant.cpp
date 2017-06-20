@@ -1,5 +1,9 @@
-#include <iostream>
-#include <utility>
+/**
+ * Code taken from the internet to implement a variant type in C++
+ * TODO: Find attribution for this file
+ * 
+ * author: ????
+ */
 #include <typeinfo>
 #include <type_traits>
 #include <string>

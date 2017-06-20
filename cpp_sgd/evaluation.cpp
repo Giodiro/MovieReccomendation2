@@ -1,7 +1,10 @@
+/**
+ * Implementation file for evaluation.h
+ *
+ * author: gmeanti
+ */
 #include <iostream>
 #include <chrono>
-#include <vector>
-#include <utility>         // pair
 
 #include "evaluation.h"
 #include "ioutil.h"        // for the timing functions

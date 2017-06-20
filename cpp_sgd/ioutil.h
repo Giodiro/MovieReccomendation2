@@ -1,11 +1,16 @@
+/**
+ * Helpers for dealing with Input/Output
+ * In this file we defined the IOUtil class which consists of only static functions
+ * to read in data from the given format, and for writing predicted values to file.
+ * Furthermore two inline functions are defined to help deal with timing functions,
+ * and printing timestamps to standard output.
+ *
+ * author: gmeanti 
+ */
 #ifndef __IOUtil_H
 #define __IOUtil_H
 
 #include <string>
-#include <Eigen/Dense>
-#include <utility>      // pair
-#include <cstdint>      // int8_t
-
 #include <ctime>
 #include <chrono>       // time measurements
 #include <sstream>      // ostringstream
@@ -37,7 +42,7 @@ namespace reccommend {
              * include in the validation sets (usefull for e.g. 3-fold CV when taking 33% of the data 
              * for validation is too much).
              */
-            static std::vector < std::pair < MatrixI, MatrixI > > readDataCV (
+            static std::vector <DataPair> readDataCV (
                     std::string filename,
                     int k_cv,
                     int nusers,

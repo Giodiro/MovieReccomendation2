@@ -1,3 +1,15 @@
+/**  main.cpp
+ * The main program implemented here uses all solvers implemented in this project
+ * in order to obtain files ready for submission.
+ * For each solver we perform 3-fold CV to have a rough idea of how it will perform
+ * and then use all of the training data to obtain a "predictor" file.
+ *
+ * This file has an optional command line argument to specify different datasets. Currently the two options are:
+ * - "submission": default option which runs the algorithms on the in-class supplied data, and outputs predictor files
+ * - "movielens": runs on the movielens 1m dataset (available https://grouplens.org/datasets/movielens/), 
+ *                cleaned to resemble the in-class supplied files.
+ */
+
 // uncomment to disable assert()
 #define NDEBUG
 #define EIGEN_NO_DEBUG
@@ -14,7 +26,6 @@
 
 using reccommend::dtype;
 using reccommend::MatrixI;
-using reccommend::MatrixD;
 using reccommend::Settings;
 using reccommend::DataPair;
 using reccommend::IOUtil;
@@ -23,6 +34,8 @@ const static int NUSERS = 10000;
 const static int NITEMS = 1000;
 const static std::string TRAIN_DATA_FILE = "data_train.csv";
 const static std::string MASK_DATA_FILE = "sampleSubmission.csv";
+const static std::string MOVIELENS_DIR = "../saved_data/movielens/ml-1m/";
+const static std::string SUBMISSION_DIR = "saved_data/submissions/";
 
 /**
  * These settings were chosen via a long parameter search with the IntegratedSolver.
@@ -46,22 +59,38 @@ const static Settings DEFAULT_SETTINGS = {
     {"max_neigh", 264},
 };
 
+/**
+ * Settings chosen after SVD parameter search.
+ * 3-fold CV score obtained was: 0.988783
+ */
 const static Settings SVD_SETTINGS = {
     {"nusers", NUSERS},
     {"nitems", NITEMS},
     {"num_factors", 15},
-    {"K1", 1},
+    {"K1", 3},
     {"K2", 21},
-    {"max_iter", 1},
+    {"max_iter", 1}, // This setting is not used (not an iterative process), but needed here.
 };
 
+/**
+ * Returns a string explaining the program's command line arguments
+ */
+std::string usageString();
 
+/**
+ * Main function to run all the collaborative filtering algorithms.
+ * TODO: This could use some refactoring to reduce code duplication
+ */
 void runAllClassif(const int num_threads, const ulong rseed,
                    const std::string submission_file,
                    const std::string mask_file,
                    const std::string train_file,
                    const int nusers, const int nitems,
                    const bool doPrediction);
+
+std::string usageString() {
+    return "Usage: SGD [submission|movielens]";
+}
 
 
 void runAllClassif(const int num_threads, const ulong rseed,
@@ -253,17 +282,18 @@ int main(int argc, char** argv) {
     }
 
     if (benchmarkType == "submission") {
-        runAllClassif(num_threads, rseed, "saved_data/submissions/",
+        runAllClassif(num_threads, rseed, SUBMISSION_DIR,
                       MASK_DATA_FILE, TRAIN_DATA_FILE,
                       NUSERS, NITEMS, true);
     }
     else if (benchmarkType == "movielens_1m") {
-        runAllClassif(num_threads, rseed, "../saved_data/submissions/",
-                      ".", "../saved_data/movielens/ml-1m/ratings_clean.csv",
+        runAllClassif(num_threads, rseed, SUBMISSION_DIR,
+                      ".", MOVIELENS_DIR + "ratings_clean.csv",
                       6040, 3952, false);
     }
     else {
         std::cout << "Benchmark type " << benchmarkType << " is not implemented\n";
+        std::cout << usageString() << "\n";
     }
 
     return 0;
