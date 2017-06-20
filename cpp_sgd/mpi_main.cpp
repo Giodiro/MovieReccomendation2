@@ -119,6 +119,19 @@ SettingsRange getSimpleConfig(const int num_threads);
 SettingsRange getSGDppConfig (const int num_threads);
 
 /**
+ * Configuration for searching parameters with the Neighbourhood solver 
+ * with Spearman correlation coefficient
+ */
+SettingsRange getNeighbourSpearmanConfig (const int num_threads);
+
+/**
+ * Configuration for searching parameters with the Neighbourhood solver 
+ * with Pearson correlation coefficient
+ */
+SettingsRange getNeighbourPearsonConfig (const int num_threads);
+
+
+/**
  * Execute the master routine.
  */
 void master (SettingsRange &min_max_config,
@@ -158,7 +171,7 @@ bool write_config_to_csv(std::vector<std::pair<Settings, double>>::iterator cbeg
                          std::vector<std::pair<Settings, double>>::iterator cend,
                          std::string fname);
 
-/**** IMPLEMENTATION ****/  
+/**** IMPLEMENTATION ****/
 
 std::string usageString() {
     return "MPI_SGD <integrated>|<svd>";
@@ -405,6 +418,128 @@ SettingsRange getIntegratedConfig (const int num_threads) {
     return min_max_config;
 }
 
+SettingsRange getNeighbourSpearmanConfig (const int num_threads) {
+    SettingsRange min_max_config;
+    config_var nusers_choice;
+    nusers_choice.set<int>(NUSERS);
+    min_max_config["nusers"] = nusers_choice;
+
+    config_var nitems_choice;
+    nitems_choice.set<int>(NITEMS);
+    min_max_config["nitems"] = nitems_choice;
+
+    config_var lrate1_choice;
+    lrate1_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.1));
+    min_max_config["lrate1"] = lrate1_choice;
+
+    config_var lrate3_choice;
+    lrate3_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.1));
+    min_max_config["lrate3"] = lrate3_choice;
+
+    config_var regl4_choice;
+    regl4_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl4"] = regl4_choice;
+
+    config_var regl6_choice;
+    regl6_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl6"] = regl6_choice;
+
+    config_var lrate_reduction_choice;
+    lrate_reduction_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.9, 0.999));
+    min_max_config["lrate_reduction"] = lrate_reduction_choice;
+
+    config_var num_factors_choice;
+    num_factors_choice.set<pair<int, int> >(pair<int, int>(1, 100));
+    min_max_config["num_factors"] = num_factors_choice;
+
+    config_var max_iter_choice;
+    max_iter_choice.set<pair<int, int> >(pair<int, int>(10, 80));
+    min_max_config["max_iter"] = max_iter_choice;
+
+    // config_var correlation_shrinkage_choice;
+    // correlation_shrinkage_choice.set<int>(100);
+    // min_max_config["correlation_shrinkage"] = correlation_shrinkage_choice;
+
+    config_var K1_choice;
+    K1_choice.set<pair<int, int> >(pair<int, int>(1, 100));
+    min_max_config["K1"] = K1_choice;
+
+    config_var K2_choice;
+    K2_choice.set<pair<int, int> >(pair<int, int>(1, 100));
+    min_max_config["K2"] = K2_choice;
+
+    config_var max_neigh_choice;
+    max_neigh_choice.set<pair<int, int> >(pair<int, int>(10, 500));
+    min_max_config["max_neigh"] = max_neigh_choice;
+
+    config_var num_threads_choice;
+    num_threads_choice.set<int>(num_threads);
+    min_max_config["num_threads"] = num_threads_choice;
+
+    return min_max_config;
+}
+
+SettingsRange getNeighbourPearsonConfig (const int num_threads) {
+    SettingsRange min_max_config;
+    config_var nusers_choice;
+    nusers_choice.set<int>(NUSERS);
+    min_max_config["nusers"] = nusers_choice;
+
+    config_var nitems_choice;
+    nitems_choice.set<int>(NITEMS);
+    min_max_config["nitems"] = nitems_choice;
+
+    config_var lrate1_choice;
+    lrate1_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.1));
+    min_max_config["lrate1"] = lrate1_choice;
+
+    config_var lrate3_choice;
+    lrate3_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.1));
+    min_max_config["lrate3"] = lrate3_choice;
+
+    config_var regl4_choice;
+    regl4_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl4"] = regl4_choice;
+
+    config_var regl6_choice;
+    regl6_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl6"] = regl6_choice;
+
+    config_var lrate_reduction_choice;
+    lrate_reduction_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.9, 0.999));
+    min_max_config["lrate_reduction"] = lrate_reduction_choice;
+
+    config_var num_factors_choice;
+    num_factors_choice.set<pair<int, int> >(pair<int, int>(1, 100));
+    min_max_config["num_factors"] = num_factors_choice;
+
+    config_var max_iter_choice;
+    max_iter_choice.set<pair<int, int> >(pair<int, int>(10, 80));
+    min_max_config["max_iter"] = max_iter_choice;
+
+    config_var correlation_shrinkage_choice;
+    correlation_shrinkage_choice.set<int>(100);
+    min_max_config["correlation_shrinkage"] = correlation_shrinkage_choice;
+
+    config_var K1_choice;
+    K1_choice.set<pair<int, int> >(pair<int, int>(1, 100));
+    min_max_config["K1"] = K1_choice;
+
+    config_var K2_choice;
+    K2_choice.set<pair<int, int> >(pair<int, int>(1, 100));
+    min_max_config["K2"] = K2_choice;
+
+    config_var max_neigh_choice;
+    max_neigh_choice.set<pair<int, int> >(pair<int, int>(10, 500));
+    min_max_config["max_neigh"] = max_neigh_choice;
+
+    config_var num_threads_choice;
+    num_threads_choice.set<int>(num_threads);
+    min_max_config["num_threads"] = num_threads_choice;
+
+    return min_max_config;
+}
+
 SettingsEntry nextConfig(SettingsRange &min_max_config, std::mt19937 &rng) {
     std::string param;
     dtype param_value;
@@ -553,6 +688,16 @@ int main(int argc, char** argv) {
             save_file = SAVE_DIR + "/SVD++_rsearch_configs.csv";
             max_tasks = 5000;
         }
+        else if (searchType == "NeighbourhoodPearson") {
+            min_max_config = getNeighbourPearsonConfig(num_threads);
+            save_file = SAVE_DIR + "/NeighbourhoodPearson_rsearch_configs.csv";
+            max_tasks = 3000;
+        }
+        else if (searchType == "NeighbourhoodSpearman") {
+            min_max_config = getNeighbourSpearmanConfig(num_threads);
+            save_file = SAVE_DIR + "/NeighbourhoodSpearman_rsearch_configs.csv";
+            max_tasks = 3000;
+        }
         else {
             std::cout << "Search type " << searchType << " is not implemented." << "\n";
             std::cout << usageString() << "\n";
@@ -572,6 +717,12 @@ int main(int argc, char** argv) {
         }
         else if (searchType == "SVD++") {
             slave<reccommend::SGDppSolver> (data_rseed);
+        }
+        else if (searchType == "NeighbourhoodPearson") {
+            slave<reccommend::NeighbourhoodPearsonSolver> (data_rseed);
+        }
+        else if (searchType == "NeighbourhoodSpearman") {
+            slave<reccommend::NeighbourhoodSpearmanSolver> (data_rseed);
         }
         else {
             return 2;
