@@ -39,37 +39,70 @@ const static std::string SUBMISSION_DIR = "saved_data/submissions/";
 
 /**
  * These settings were chosen via a long parameter search with the IntegratedSolver.
+ * 3-fold CV score obtained was 0.976816
  */
 const static Settings DEFAULT_SETTINGS = {
     {"nusers", NUSERS},
     {"nitems", NITEMS},
-    {"lrate1", 0.006},
-    {"lrate2", 0.00546573},
-    {"lrate3", 0.00525803},
-    {"regl4", 0.0360761},
-    {"regl6", 0.0412977},
-    {"regl7", 0.0698449},
-    {"regl8", 0.0542553},
-    {"lrate_reduction", 0.96},
-    {"num_factors", 21},
-    {"max_iter", 51},
-    {"correlation_shrinkage", 100},
-    {"K1", 1},
-    {"K2", 10},
-    {"max_neigh", 264},
+    {"lrate1", 0.0253247},
+    {"lrate2", 0.024758},
+    {"lrate3", 0.0118577},
+    {"regl4", 0.196401},
+    {"regl6", 0.135719},
+    {"regl7", 0.0653609},
+    {"regl8", 0.162456},
+    {"lrate_reduction", 0.922435},
+    {"num_factors", 44},
+    {"correlation_shrinkage", 100}, // Not included in search
+    {"K1", 1}, // Not included in search
+    {"K2", 18}, // Not included in search (set equal to SVD_SETTINGS)
+    {"max_neigh", 127},
+    {"max_iter", 72},
 };
 
 /**
- * Settings chosen after SVD parameter search.
+ * Settings chosen after SVD random parameter search.
  * 3-fold CV score obtained was: 0.988783
  */
 const static Settings SVD_SETTINGS = {
     {"nusers", NUSERS},
     {"nitems", NITEMS},
-    {"num_factors", 15},
-    {"K1", 3},
-    {"K2", 21},
+    {"num_factors", 19},
+    {"K1", 1},
+    {"K2", 18},
     {"max_iter", 1}, // This setting is not used (not an iterative process), but needed here.
+};
+
+/**
+ * Settings chosen with random parameter search.
+ * 3-fold CV score obtained was: 0.980616
+ */
+const static Settings SIMPLE_SETTINGS = {
+    {"nusers", NUSERS},
+    {"nitems", NITEMS},
+    {"lrate1", 0.00472091},
+    {"lrate2", 0.0212446},
+    {"regl6", 0.0463903},
+    {"regl7", 0.0914689},
+    {"lrate_reduction", 0.965086},
+    {"num_factors", 96},
+    {"max_iter", 78},
+};
+
+/**
+ * Settings chosen with random parameter search.
+ * 3-fold CV score obtained was: 0.979596
+ */
+const static Settings SGDpp_SETTINGS = {
+    {"nusers", NUSERS},
+    {"nitems", NITEMS},
+    {"lrate1", 0.0068136},
+    {"lrate2", 0.017407},
+    {"regl6", 0.147678},
+    {"regl7", 0.0583994},
+    {"lrate_reduction", 0.925077},
+    {"num_factors", 100},
+    {"max_iter", 80},
 };
 
 /**
@@ -88,6 +121,10 @@ void runAllClassif(const int num_threads, const ulong rseed,
                    const int nusers, const int nitems,
                    const bool doPrediction);
 
+
+/**** IMPLEMENTATION ****/
+
+
 std::string usageString() {
     return "Usage: SGD [submission|movielens]";
 }
@@ -105,6 +142,12 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     Settings svdSettings = Settings(SVD_SETTINGS);
     svdSettings["num_threads"] = num_threads;
+
+    Settings simpleSettings = Settings(SIMPLE_SETTINGS);
+    simpleSettings["num_threads"] = num_threads;
+
+    Settings sgdppSettings = Settings(SGDpp_SETTINGS);
+    sgdppSettings["num_threads"] = num_threads;
 
     int k = 3;
     MatrixI mask;
@@ -165,10 +208,10 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running SimpleSGDSolver *******\n";
     
-    test_score = reccommend::kfoldCV<reccommend::SimpleSGDSolver>(k, settings, cv_data, 2);
+    test_score = reccommend::kfoldCV<reccommend::SimpleSGDSolver>(k, simpleSettings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
     if (doPrediction) {
-        auto solver = reccommend::SimpleSGDSolver(settings, data.first, mask);
+        auto solver = reccommend::SimpleSGDSolver(simpleSettings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_simple_train.csv");
@@ -180,11 +223,11 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running SGDppSolver *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::SGDppSolver>(k, settings, cv_data, 2);
+    test_score = reccommend::kfoldCV<reccommend::SGDppSolver>(k, sgdppSettings, cv_data, 2);
     std::cout << "test score: " << test_score << "\n";
 
     if (doPrediction) {
-        auto solver = reccommend::SGDppSolver(settings, data.first, mask);
+        auto solver = reccommend::SGDppSolver(sgdppSettings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_SGD++_train.csv");
