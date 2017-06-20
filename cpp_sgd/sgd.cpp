@@ -661,5 +661,8 @@ bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i) {
 }
 
 void reccommend::NeighbourhoodSolver::postIter () {
-    IntegratedSolver::postIter();
+    dtype lrate1 = getSetting("lrate3");
+    setSetting("lrate1", lrate1 * getSetting("lrate_reduction"));
+    dtype lrate3 = getSetting("lrate3");
+    setSetting("lrate3", lrate3 * getSetting("lrate_reduction"));
 }
