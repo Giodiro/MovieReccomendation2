@@ -21,8 +21,8 @@ using reccommend::IOUtil;
 
 const static int NUSERS = 10000;
 const static int NITEMS = 1000;
-const static std::string TRAIN_DATA_FILE = "../data_train.csv";
-const static std::string MASK_DATA_FILE = "../sampleSubmission.csv";
+const static std::string TRAIN_DATA_FILE = "data_train.csv";
+const static std::string MASK_DATA_FILE = "sampleSubmission.csv";
 
 /**
  * These settings were chosen via a long parameter search with the IntegratedSolver.
@@ -253,7 +253,7 @@ int main(int argc, char** argv) {
     }
 
     if (benchmarkType == "submission") {
-        runAllClassif(num_threads, rseed, "../saved_data/submissions/",
+        runAllClassif(num_threads, rseed, "saved_data/submissions/",
                       MASK_DATA_FILE, TRAIN_DATA_FILE,
                       NUSERS, NITEMS, true);
     }
