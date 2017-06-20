@@ -76,7 +76,7 @@ class DenoisingAutoencoder:
         # Masking noise mask is computed here since we need the binary tensor for
         # computing the loss function. The procedure is same as for gaussian noise.
         # uniform [keep_prob, 1.0 + keep_prob)
-        random_tensor = self.keep_prob + tf.random_uniform(tf.shape(self.input), seed=self.get_rseed(), dtype=tf.float32)
+        random_tensor = self.keep_prob + tf.random_uniform(tf.shape(self.input), seed=self.get_rseed(), dtype=tf.float32, name="masking_random_tensor")
         # 0. if [keep_prob, 1.0) and 1. if [1.0, 1.0 + keep_prob)
         binary_tensor = tf.floor(random_tensor)
 
