@@ -32,10 +32,10 @@ using reccommend::IOUtil;
 
 const static int NUSERS = 10000;
 const static int NITEMS = 1000;
-const static std::string TRAIN_DATA_FILE = "../data_train.csv";
-const static std::string MASK_DATA_FILE  = "../sampleSubmission.csv";
-const static std::string MOVIELENS_DIR   = "../saved_data/movielens/ml-1m/";
-const static std::string SUBMISSION_DIR  = "../saved_data/submissions/";
+const static std::string TRAIN_DATA_FILE = "data_train.csv";
+const static std::string MASK_DATA_FILE = "sampleSubmission.csv";
+const static std::string MOVIELENS_DIR = "../saved_data/movielens/ml-1m/";
+const static std::string SUBMISSION_DIR = "saved_data/submissions/";
 
 /**
  * These settings were chosen via a long parameter search with the IntegratedSolver.
