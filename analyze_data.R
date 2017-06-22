@@ -12,6 +12,7 @@ svd_file <- "/home/giodiro/Desktop/CIL/exercises/ex2copy/saved_data/rsearch/svd_
 svdpp_file <- "/home/giodiro/Desktop/CIL/exercises/ex2copy/saved_data/rsearch/SVD++_rsearch_configs.csv"
 integrated_file <- "/home/giodiro/Desktop/CIL/exercises/ex2copy/saved_data/rsearch/integrated_rsearch_configs.csv"
 simple_file <- "/home/giodiro/Desktop/CIL/exercises/ex2copy/saved_data/rsearch/simple_rsearch_configs.csv"
+neigh_spear_file <- "/home/giodiro/Desktop/CIL/exercises/ex2copy/saved_data/rsearch/NeighbourhoodSpearman_rsearch_configs.csv"
 
 analyze <- function (file, name) {
   data <- read.csv(file, header=TRUE)
@@ -27,7 +28,7 @@ data.svd <- analyze(svd_file, "SVD")
 data.svdpp <- analyze(svdpp_file, "SVD++")
 data.integrated <- analyze(integrated_file, "Integrated")
 data.simple <- analyze(simple_file, "Simple model")
-
+data.neigh_spear <- analyze(neigh_spear_file, "Neighbourhood model (Spearman)")
 ## Analysis:
 
 ## Simple model
@@ -40,6 +41,7 @@ pairs(data.simple, gap=0, pch=18)
 pairs(data.simple[which(data.simple$score < 1.0),][c("score", "regl7")], gap=0, pch=18)
 # the num_factors parameter has a slightly positive correlation with accuracy, however after num_factors=60 there 
 # seem to be little benefits.
+# Best score for this model is: 0.980616
 
 ## Integrated model
 data.integrated <- subset(data.integrated, select=-c(correlation_shrinkage, K2, K1))
@@ -64,7 +66,17 @@ pairs(data.svd, gap=0, pch=18)
 # Follows K2, which is optimally set at 16.
 # K1 has a linear relationship with the score so we set it at the lowest possible value of 
 # 1 where it doesn't affect regularization.
+# Best result for this model is: 0.988773
 
+## Neighbourhood model (spearman correlation)
+pairs(data.neigh_spear, gap=0, pch=18)
+fl <- lm(form, data = data.valid)
+summary(fl)
+# As identified by the linear model, the most influent parameters are regl4, lrate3,
+# max_iter and lrate_reduction.
+# In general, in the iteratively solved models better results are obtained with high max_iter,
+# and low lrate_reduction (which means larger reductions each epoch).
+# Best result for this model: 0.985134
 
 ### Other random cruft
 #
