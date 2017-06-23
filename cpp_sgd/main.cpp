@@ -214,7 +214,7 @@ void runAllClassif(const int num_threads, const ulong rseed,
     auto trainVec = std::vector< std::vector<dtype> >();
     auto testVec = std::vector< std::vector<dtype> >();
 
-    std::cout << "******* Running Baseline Predictor *******\n";
+    std::cout << reccommend::now() << "******* Running Baseline Predictor *******\n";
 
     if (doCV) {
         // Use same settings as SVD settings (K1 and K2 are the only things needed here)
@@ -234,7 +234,7 @@ void runAllClassif(const int num_threads, const ulong rseed,
     std::cout << "\n\n\n\n";
 
 
-    std::cout << "******* Running SVD *******\n";
+    std::cout << reccommend::now() << "******* Running SVD *******\n";
 
     if (doCV) {
         test_score = reccommend::kfoldCV<reccommend::SVD>(k, svdSettings, cv_data, 2);
@@ -253,7 +253,7 @@ void runAllClassif(const int num_threads, const ulong rseed,
     std::cout << "\n\n\n\n";
 
 
-    std::cout << "******* Running SimpleSGDSolver *******\n";
+    std::cout << reccommend::now() << "******* Running SimpleSGDSolver *******\n";
     
     if (doCV) {
         test_score = reccommend::kfoldCV<reccommend::SimpleSGDSolver>(k, simpleSettings, cv_data, 2);
@@ -272,7 +272,7 @@ void runAllClassif(const int num_threads, const ulong rseed,
     std::cout << "\n\n\n\n";
 
 
-    std::cout << "******* Running SGDppSolver *******\n";
+    std::cout << reccommend::now() << "******* Running SGDppSolver *******\n";
 
     if (doCV) {
         test_score = reccommend::kfoldCV<reccommend::SGDppSolver>(k, sgdppSettings, cv_data, 2);
@@ -291,7 +291,7 @@ void runAllClassif(const int num_threads, const ulong rseed,
     std::cout << "\n\n\n\n";
 
 
-    std::cout << "******* Running IntegratedSolver (pearson) *******\n";
+    std::cout << reccommend::now() << "******* Running IntegratedSolver (pearson) *******\n";
 
     if (doCV) {
         test_score = reccommend::kfoldCV<reccommend::IntegratedPearsonSolver>(k, settings, cv_data, 2);
@@ -309,8 +309,8 @@ void runAllClassif(const int num_threads, const ulong rseed,
     }
     std::cout << "\n\n\n\n";
 
-
-    std::cout << "******* Running IntegratedSolver (spearman) *******\n";
+    /**
+    std::cout << reccommend::now() << "******* Running IntegratedSolver (spearman) *******\n";
 
     if (doCV) {
         test_score = reccommend::kfoldCV<reccommend::IntegratedSpearmanSolver>(k, settings, cv_data, 2);
@@ -327,9 +327,9 @@ void runAllClassif(const int num_threads, const ulong rseed,
         testVec.push_back(solver.testPredictor());
     }
     std::cout << "\n\n\n\n";
+    */
 
-
-    std::cout << "******* Running NeighbourhoodSolver (pearson) *******\n";
+    std::cout << reccommend::now() << "******* Running NeighbourhoodSolver (pearson) *******\n";
 
     if (doCV) {
         test_score = reccommend::kfoldCV<reccommend::NeighbourhoodPearsonSolver>(k, neighPearsSettings, cv_data, 2);
@@ -346,8 +346,8 @@ void runAllClassif(const int num_threads, const ulong rseed,
     }
     std::cout << "\n\n\n\n";
 
-
-    std::cout << "******* Running NeighbourhoodSolver (spearman) *******\n";
+    /**
+    std::cout << reccommend::now() << "******* Running NeighbourhoodSolver (spearman) *******\n";
     
     if (doCV) {
         test_score = reccommend::kfoldCV<reccommend::NeighbourhoodSpearmanSolver>(k, neighSpearSettings, cv_data, 2);
@@ -363,7 +363,7 @@ void runAllClassif(const int num_threads, const ulong rseed,
         trainVec.push_back(solver.trainPredictor());
         testVec.push_back(solver.testPredictor());
     }
-
+    */
     std::cout << "\n\nFINISHED\n";
 }
 
