@@ -106,6 +106,45 @@ const static Settings SGDpp_SETTINGS = {
 };
 
 /**
+ * Settings chosen with random parameter search.
+ * 3-fold CV score obtained was: 0.985134
+ */
+const static Settings NEIGH_SPEAR_SETTINGS = {
+    {"nusers", NUSERS},
+    {"nitems", NITEMS},
+    {"lrate1", 0.045606},
+    {"lrate3", 0.0336329},
+    {"regl4", 0.0312709},
+    {"regl6", 0.0838875},
+    {"lrate_reduction", 0.926721},
+    {"num_factors", 80},
+    {"max_iter", 64},
+    {"max_neigh", 400},
+    {"K1", 23},
+    {"K2", 69},
+};
+
+/**
+ * Settings chosen with random parameter search
+ * for the spearman correlation coefficient
+ */
+const static Settings NEIGH_PEARS_SETTINGS = {
+    {"nusers", NUSERS},
+    {"nitems", NITEMS},
+    {"lrate1", 0.045606},
+    {"lrate3", 0.0336329},
+    {"regl4", 0.0312709},
+    {"regl6", 0.0838875},
+    {"lrate_reduction", 0.926721},
+    {"num_factors", 80},
+    {"max_iter", 64},
+    {"max_neigh", 400},
+    {"K1", 23},
+    {"K2", 69},
+    {"correlation_shrinkage", 100}, // Not included in search
+};
+
+/**
  * Returns a string explaining the program's command line arguments
  */
 std::string usageString();
@@ -149,6 +188,13 @@ void runAllClassif(const int num_threads, const ulong rseed,
     Settings sgdppSettings = Settings(SGDpp_SETTINGS);
     sgdppSettings["num_threads"] = num_threads;
 
+    Settings neighSpearSettings = Settings(NEIGH_SPEAR_SETTINGS);
+    neighSpearSettings["num_threads"] = num_threads;
+
+    Settings neighPearsSettings = Settings(NEIGH_PEARS_SETTINGS);
+    neighPearsSettings["num_threads"] = num_threads;
+
+    bool doCV = true;
     int k = 3;
     MatrixI mask;
     DataPair data;
@@ -168,15 +214,13 @@ void runAllClassif(const int num_threads, const ulong rseed,
     auto trainVec = std::vector< std::vector<dtype> >();
     auto testVec = std::vector< std::vector<dtype> >();
 
-    //std::vector< std::unique_ptr <reccommend::SGDSolver> > solverList;
-
-    //solverList.emplace_back(std::unique_ptr<reccommend::SGDSolver>(new reccommend::SVD(settings, data.first, mask)));
-
     std::cout << "******* Running Baseline Predictor *******\n";
 
-    // Use same settings as SVD settings (K1 and K2 are the only things needed here)
-    test_score = reccommend::kfoldCV<reccommend::BiasPredictor>(k, svdSettings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
+    if (doCV) {
+        // Use same settings as SVD settings (K1 and K2 are the only things needed here)
+        test_score = reccommend::kfoldCV<reccommend::BiasPredictor>(k, svdSettings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
 
     if (doPrediction) {
         auto solver = reccommend::BiasPredictor(svdSettings, data.first, mask);
@@ -192,8 +236,10 @@ void runAllClassif(const int num_threads, const ulong rseed,
 
     std::cout << "******* Running SVD *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::SVD>(k, svdSettings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
+    if (doCV) {
+        test_score = reccommend::kfoldCV<reccommend::SVD>(k, svdSettings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
 
     if (doPrediction) {
         auto solver = reccommend::SVD(svdSettings, data.first, mask);
@@ -206,10 +252,14 @@ void runAllClassif(const int num_threads, const ulong rseed,
     }
     std::cout << "\n\n\n\n";
 
+
     std::cout << "******* Running SimpleSGDSolver *******\n";
     
-    test_score = reccommend::kfoldCV<reccommend::SimpleSGDSolver>(k, simpleSettings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
+    if (doCV) {
+        test_score = reccommend::kfoldCV<reccommend::SimpleSGDSolver>(k, simpleSettings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
+
     if (doPrediction) {
         auto solver = reccommend::SimpleSGDSolver(simpleSettings, data.first, mask);
         solver.run();
@@ -221,10 +271,13 @@ void runAllClassif(const int num_threads, const ulong rseed,
     }
     std::cout << "\n\n\n\n";
 
+
     std::cout << "******* Running SGDppSolver *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::SGDppSolver>(k, sgdppSettings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
+    if (doCV) {
+        test_score = reccommend::kfoldCV<reccommend::SGDppSolver>(k, sgdppSettings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
 
     if (doPrediction) {
         auto solver = reccommend::SGDppSolver(sgdppSettings, data.first, mask);
@@ -237,10 +290,13 @@ void runAllClassif(const int num_threads, const ulong rseed,
     }
     std::cout << "\n\n\n\n";
 
+
     std::cout << "******* Running IntegratedSolver (pearson) *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::IntegratedPearsonSolver>(k, settings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
+    if (doCV) {
+        test_score = reccommend::kfoldCV<reccommend::IntegratedPearsonSolver>(k, settings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
 
     if (doPrediction) {
         auto solver = reccommend::IntegratedPearsonSolver(settings, data.first, mask);
@@ -250,13 +306,16 @@ void runAllClassif(const int num_threads, const ulong rseed,
         IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Integrated_pearson_test.csv");
         trainVec.push_back(solver.trainPredictor());
         testVec.push_back(solver.testPredictor());
-        std::cout << "\n\n\n\n";
     }
+    std::cout << "\n\n\n\n";
+
 
     std::cout << "******* Running IntegratedSolver (spearman) *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::IntegratedSpearmanSolver>(k, settings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
+    if (doCV) {
+        test_score = reccommend::kfoldCV<reccommend::IntegratedSpearmanSolver>(k, settings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
 
     if (doPrediction) {
         auto solver = reccommend::IntegratedSpearmanSolver(settings, data.first, mask);
@@ -266,17 +325,18 @@ void runAllClassif(const int num_threads, const ulong rseed,
         IOUtil::predictorToFile(mask, predictors.second, submission_file + "_Integrated_spearman_test.csv");
         trainVec.push_back(solver.trainPredictor());
         testVec.push_back(solver.testPredictor());
-        std::cout << "\n\n\n\n";
     }
+    std::cout << "\n\n\n\n";
 
 
     std::cout << "******* Running NeighbourhoodSolver (pearson) *******\n";
 
-    test_score = reccommend::kfoldCV<reccommend::NeighbourhoodPearsonSolver>(k, settings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
-
+    if (doCV) {
+        test_score = reccommend::kfoldCV<reccommend::NeighbourhoodPearsonSolver>(k, neighPearsSettings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
     if (doPrediction) {
-        auto solver = reccommend::NeighbourhoodPearsonSolver(settings, data.first, mask);
+        auto solver = reccommend::NeighbourhoodPearsonSolver(neighPearsSettings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Neighbourhood_pearson_train.csv");
@@ -284,14 +344,18 @@ void runAllClassif(const int num_threads, const ulong rseed,
         trainVec.push_back(solver.trainPredictor());
         testVec.push_back(solver.testPredictor());
     }
+    std::cout << "\n\n\n\n";
+
 
     std::cout << "******* Running NeighbourhoodSolver (spearman) *******\n";
-        
-    test_score = reccommend::kfoldCV<reccommend::NeighbourhoodSpearmanSolver>(k, settings, cv_data, 2);
-    std::cout << "test score: " << test_score << "\n";
+    
+    if (doCV) {
+        test_score = reccommend::kfoldCV<reccommend::NeighbourhoodSpearmanSolver>(k, neighSpearSettings, cv_data, 2);
+        std::cout << "test score: " << test_score << "\n";
+    }
 
     if (doPrediction) {
-        auto solver = reccommend::NeighbourhoodSpearmanSolver(settings, data.first, mask);
+        auto solver = reccommend::NeighbourhoodSpearmanSolver(neighSpearSettings, data.first, mask);
         solver.run();
         auto predictors = solver.predictors();
         IOUtil::predictorToFile(data.first, predictors.first, submission_file + "_Neighbourhood_spearman_train.csv");
@@ -308,7 +372,7 @@ int main(int argc, char** argv) {
     // Force flushing of output
     std::cout.setf( std::ios_base::unitbuf );
 
-    unsigned long rseed = 123589;
+    unsigned long rseed = 9092;
 
     int num_threads = 4;
     if (const char* env_p = std::getenv("OMP_NUM_THREADS")) {
