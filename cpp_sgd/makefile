@@ -19,7 +19,7 @@ sgd: CC=g++      # Used for compiling SGD
 
 	# Use of -isystem instead of -I avoids printing tons of errors from Eigen
 	LDFLAGS=-fopenmp -isystem ../lib/
-	CFLAGS=-std=c++14 -O3 -g3 -march=native $(LDFLAGS) $(WARNINGS)
+	CFLAGS=-std=c++14 -O3 -march=native $(LDFLAGS) $(WARNINGS)
 else
 mpi: CC=mpic++
 sgd: CC=icpc
@@ -47,10 +47,10 @@ mpi: $(MPI_EXE)
 
 sgd: $(SGD_EXE)
 
-$(MPI_EXE): $(COMMON_OBJECTS) $(MPI_OBJECTS)
+$(MPI_EXE): $(MPI_OBJECTS) $(COMMON_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@
 
-$(SGD_EXE): $(COMMON_OBJECTS) $(SGD_OBJECTS)
+$(SGD_EXE): $(SGD_OBJECTS) $(COMMON_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@
 
 .cpp.o:
