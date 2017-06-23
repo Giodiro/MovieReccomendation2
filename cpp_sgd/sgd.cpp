@@ -15,8 +15,15 @@
 #include "ioutil.h"     // for timing functions
 #include "sgd_util.h"   // for computing various statistics (e.g. mean, bias) on the data matrices
 
-//#define PARALLEL_REPORT
+#define PARALLEL_REPORT
 #define CHECK_NAN
+
+/**
+ * This allows to experiment with implicit feedback,
+ * and with limiting the number of neighbours.
+ */
+#define USE_SIM_MATRIX (false)
+#define USE_IMPLICIT (true)
 
 using reccommend::SGDSolver;
 
@@ -362,14 +369,16 @@ bool reccommend::IntegratedSolver::initData () {
                                                getIntSetting("K1"), getIntSetting("K2"));
 
     // Similarity score depends on constructor parameter `m_similarityType`:
-    if (m_similarityType == "pearson") {
-        m_simMat = reccommend::calcPearsonMatrix(m_train, getIntSetting("correlation_shrinkage"),
-                                                   getIntSetting("num_threads"));
-    } else if (m_similarityType == "spearman") {
-        m_simMat = reccommend::calcSpearmanMatrix(m_train, getIntSetting("num_threads"));
-    } else {
-        std::cout << "Invalid similarity score " << m_similarityType << "\n";
-        return false;
+    if (USE_SIM_MATRIX) {
+        if (m_similarityType == "pearson") {
+            m_simMat = reccommend::calcPearsonMatrix(m_train, getIntSetting("correlation_shrinkage"),
+                                                       getIntSetting("num_threads"));
+        } else if (m_similarityType == "spearman") {
+            m_simMat = reccommend::calcSpearmanMatrix(m_train, getIntSetting("num_threads"));
+        } else {
+            std::cout << "Invalid similarity score " << m_similarityType << "\n";
+            return false;
+        }
     }
 
     // Precompute the which_num_u arrays (indices of ratings sorted by users)
@@ -393,23 +402,26 @@ dtype reccommend::IntegratedSolver::predict (int u, int i) {
     std::vector<int> implicitU(m_implicitU[u].size());
     std::copy(m_implicitU[u].begin(), m_implicitU[u].end(), implicitU.begin());
 
-    int inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
-    int inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
-    // partial sort of the implicitU, explicitU vectors so that all elements
-    // after position inv_kmax_* are _more similar_ to the current item i, than
-    // the elements before that position.
-    nth_element(explicitU.begin(), 
-                explicitU.begin() + inv_kmax_expl,
-                explicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
-    nth_element(implicitU.begin(), 
-                implicitU.begin() + inv_kmax_impl,
-                implicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
+    int inv_kmax_expl = 0, inv_kmax_impl = 0;
+    if (USE_SIM_MATRIX) {
+        inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
+        inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
+        // partial sort of the implicitU, explicitU vectors so that all elements
+        // after position inv_kmax_* are _more similar_ to the current item i, than
+        // the elements before that position.
+        nth_element(explicitU.begin(), 
+                    explicitU.begin() + inv_kmax_expl,
+                    explicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+        nth_element(implicitU.begin(), 
+                    implicitU.begin() + inv_kmax_impl,
+                    implicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+    }
 
     dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
     dtype n_impl = 1 / sqrt(implicitU.size() - inv_kmax_impl);
@@ -458,23 +470,26 @@ bool reccommend::IntegratedSolver::predictUpdate (int u, int i) {
     std::vector<int> implicitU(m_implicitU[u].size());
     std::copy(m_implicitU[u].begin(), m_implicitU[u].end(), implicitU.begin());
 
-    int inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
-    int inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
-    // partial sort of the implicitU, explicitU vectors so that all elements
-    // after position inv_kmax_* are _more similar_ to the current item i, than
-    // the elements before that position.
-    nth_element(explicitU.begin(), 
-                explicitU.begin() + inv_kmax_expl,
-                explicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
-    nth_element(implicitU.begin(), 
-                implicitU.begin() + inv_kmax_impl,
-                implicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
+    int inv_kmax_expl = 0, inv_kmax_impl = 0;
+    if (USE_SIM_MATRIX) {
+        inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
+        inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
+        // partial sort of the implicitU, explicitU vectors so that all elements
+        // after position inv_kmax_* are _more similar_ to the current item i, than
+        // the elements before that position.
+        nth_element(explicitU.begin(), 
+                    explicitU.begin() + inv_kmax_expl,
+                    explicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+        nth_element(implicitU.begin(), 
+                    implicitU.begin() + inv_kmax_impl,
+                    implicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+    }
 
     dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
     dtype n_impl = 1 / sqrt(implicitU.size() - inv_kmax_impl);
@@ -557,44 +572,54 @@ bool reccommend::NeighbourhoodSolver::initData () {
     return IntegratedSolver::initData();
 }
 
+
 dtype reccommend::NeighbourhoodSolver::predict (int u, int i) {
     // Copy the explicit/implicit user rating indices vectors into local copies
     std::vector<int> explicitU(m_explicitU[u].size());
     std::copy(m_explicitU[u].begin(), m_explicitU[u].end(), explicitU.begin());
-    std::vector<int> implicitU(m_implicitU[u].size());
-    std::copy(m_implicitU[u].begin(), m_implicitU[u].end(), implicitU.begin());
+    std::vector<int> implicitU;
+    if (USE_IMPLICIT) {
+        implicitU = std::vector<int>(m_implicitU[u].size());
+        std::copy(m_implicitU[u].begin(), m_implicitU[u].end(), implicitU.begin());
+    }
 
-    int inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
-    int inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
+    int inv_kmax_expl = 0, inv_kmax_impl = 0;
+    if (USE_SIM_MATRIX) {
+        inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
+        if (USE_IMPLICIT) {
+            inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
+        }
+        nth_element(explicitU.begin(), 
+                    explicitU.begin() + inv_kmax_expl,
+                    explicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+        nth_element(implicitU.begin(), 
+                    implicitU.begin() + inv_kmax_impl,
+                    implicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+    }
 
-    nth_element(explicitU.begin(), 
-                explicitU.begin() + inv_kmax_expl,
-                explicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
-    nth_element(implicitU.begin(), 
-                implicitU.begin() + inv_kmax_impl,
-                implicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
-
-    dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
-    dtype n_impl = 1 / sqrt(implicitU.size() - inv_kmax_impl);
-
-    //cout << n_expl << " " << n_impl << std::endl;
+    dtype n_expl, n_impl = 0;
+    n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
+    if (USE_IMPLICIT) {
+        n_impl = 1 / sqrt(implicitU.size() - inv_kmax_impl);
+    }
 
     dtype explicit_sum = 0;
     for (size_t a = inv_kmax_expl; a < explicitU.size(); a++) {
         explicit_sum += m_bias_offset(u, explicitU[a]) * m_w(i, explicitU[a]);
     }
     dtype implicit_sum = 0;
-    for (size_t a = inv_kmax_impl; a < implicitU.size(); a++) {
-        implicit_sum += m_c(i, implicitU[a]);
+    if (USE_IMPLICIT) {
+        for (size_t a = inv_kmax_impl; a < implicitU.size(); a++) {
+            implicit_sum += m_c(i, implicitU[a]);
+        }
     }
     //cout << explicit_sum << " " << implicit_sum << std::endl;
-
 
     dtype prediction = m_globalBias + m_userBias(u) + m_itemBias(i) +
                     n_expl * explicit_sum +
@@ -606,36 +631,51 @@ bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i) {
     // Copy the explicit/implicit user rating indices vectors into local copies
     std::vector<int> explicitU(m_explicitU[u].size());
     std::copy(m_explicitU[u].begin(), m_explicitU[u].end(), explicitU.begin());
-    std::vector<int> implicitU(m_implicitU[u].size());
-    std::copy(m_implicitU[u].begin(), m_implicitU[u].end(), implicitU.begin());
+    std::vector<int> implicitU;
+    if (USE_IMPLICIT) {
+        implicitU = std::vector<int>(m_implicitU[u].size());
+        std::copy(m_implicitU[u].begin(), m_implicitU[u].end(), implicitU.begin());
+    }
 
-    int inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
-    int inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
+    int inv_kmax_expl = 0, inv_kmax_impl = 0;
+    if (USE_SIM_MATRIX) {
+        inv_kmax_expl = max(static_cast<dtype>(0), explicitU.size() - getSetting("max_neigh"));
+        if (USE_IMPLICIT) {
+            inv_kmax_impl = max(static_cast<dtype>(0), implicitU.size() - getSetting("max_neigh"));
+        }
+        nth_element(explicitU.begin(), 
+                    explicitU.begin() + inv_kmax_expl,
+                    explicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+        nth_element(implicitU.begin(), 
+                    implicitU.begin() + inv_kmax_impl,
+                    implicitU.end(),
+                    [this, i] (const int i1, const int i2) {
+                        return m_simMat(i, i1) < m_simMat(i, i2);
+                    });
+    }
 
-    nth_element(explicitU.begin(), 
-                explicitU.begin() + inv_kmax_expl,
-                explicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
-    nth_element(implicitU.begin(), 
-                implicitU.begin() + inv_kmax_impl,
-                implicitU.end(),
-                [this, i] (const int i1, const int i2) {
-                    return m_simMat(i, i1) < m_simMat(i, i2);
-                });
+    dtype n_expl, n_impl = 0;
+    n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
+    if (USE_IMPLICIT) {
+        n_impl = 1 / sqrt(implicitU.size() - inv_kmax_impl);
+    }
 
-    dtype n_expl = 1 / sqrt(explicitU.size() - inv_kmax_expl);
-    dtype n_impl = 1 / sqrt(implicitU.size() - inv_kmax_impl);
+    //cout << n_expl << " " << n_impl << std::endl;
 
     dtype explicit_sum = 0;
     for (size_t a = inv_kmax_expl; a < explicitU.size(); a++) {
         explicit_sum += m_bias_offset(u, explicitU[a]) * m_w(i, explicitU[a]);
     }
     dtype implicit_sum = 0;
-    for (size_t a = inv_kmax_impl; a < implicitU.size(); a++) {
-        implicit_sum += m_c(i, implicitU[a]);
+    if (USE_IMPLICIT) {
+        for (size_t a = inv_kmax_impl; a < implicitU.size(); a++) {
+            implicit_sum += m_c(i, implicitU[a]);
+        }
     }
+    //cout << explicit_sum << " " << implicit_sum << std::endl;
 
     dtype prediction = m_globalBias + m_userBias(u) + m_itemBias(i) +
                     n_expl * explicit_sum +
@@ -653,9 +693,11 @@ bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i) {
             (err * n_expl * m_bias_offset(u, explicitU[a]) - getSetting("regl4") * m_w(i, explicitU[a]));
     }
     // Update m_c
-    for (size_t a = inv_kmax_impl; a < implicitU.size(); a++) {
-        m_c(i, implicitU[a]) += getSetting("lrate3") *
-            (err * n_impl - getSetting("regl4") * m_c(i, implicitU[a]));
+    if (USE_IMPLICIT) {
+        for (size_t a = inv_kmax_impl; a < implicitU.size(); a++) {
+            m_c(i, implicitU[a]) += getSetting("lrate3") *
+                (err * n_impl - getSetting("regl4") * m_c(i, implicitU[a]));
+        }
     }
     return true;
 }
