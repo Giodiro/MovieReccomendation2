@@ -156,7 +156,7 @@ MatrixD reccommend::calcBiasMatrix (const MatrixI &data, const dtype globalMean,
     int nusers = data.rows();
 
     MatrixD biasMatrix = MatrixD::Zero(nusers, nitems);
-    ColVectorD movieMeans = ColVectorD::Zero(nitems);
+    ColVectorD movieOffsets = ColVectorD::Zero(nitems);
     ColVectorD userOffsets = ColVectorD::Zero(nusers);
 
     // Calculate a (normalized) mean of each movie
@@ -168,7 +168,10 @@ MatrixD reccommend::calcBiasMatrix (const MatrixI &data, const dtype globalMean,
                 count++;
             }
         }
-        movieMeans(i) = static_cast<dtype>(sum - globalMean*count) / (K1 + count);
+        // The K1 (and similarly K2) parameter is a shrinkage coefficient.
+        // Used to push the movie mean towards the global mean, or in this case
+        // the offset wrt to the global mean towards 0 (which is the same thing).
+        movieOffsets(i) = static_cast<dtype>(sum - globalMean*count) / (K1 + count);
     }
 
     // Calculate the "offset" for each user. Intuitively the offset represents
@@ -178,7 +181,9 @@ MatrixD reccommend::calcBiasMatrix (const MatrixI &data, const dtype globalMean,
         int count = 0;
         for (int i = 0; i < nitems; i++) {
             if (data(u, i) != 0) {
-                offsetSum += data(u, i) - movieMeans(i);
+                // Here we take the portion of user offset which is not explained
+                // already by the movie offset.
+                offsetSum += data(u, i) - movieOffsets(i);
                 count++;
             }
         }
@@ -188,7 +193,7 @@ MatrixD reccommend::calcBiasMatrix (const MatrixI &data, const dtype globalMean,
     for (int u = 0; u < nusers; u++) {
         for (int i = 0; i < nitems; i++) {
             if (data(u, i) == 0) {
-                biasMatrix(u, i) = movieMeans(i) + userOffsets(u) + globalMean;
+                biasMatrix(u, i) = movieOffsets(i) + userOffsets(u) + globalMean;
             }
             else {
                 biasMatrix(u, i) = data(u, i);
