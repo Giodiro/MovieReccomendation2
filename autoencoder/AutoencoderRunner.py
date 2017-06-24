@@ -15,6 +15,8 @@ which is needed since we use the tanh transfer function.
 This is similar to mean-centering the data.
 The train_autoencoder function is responsible for training and making predictions.
 It consists mainly of boilerplate code.
+Parameters were chosen with a not very long run of Bayesian hyperparameter optimization.
+The best results from the search were: 0.98592 (however the number of epochs was relatively low)
 
 @author: gmeanti
 """
@@ -54,7 +56,32 @@ def untransform_data(X, mask):
     return maskedX.data
 
 
-def train_autoencoder(sett, data_axis=0, make_predictions=False, dataset="CF"):
+def cross_val_score(k, sett, valid_size=0.1, data_axis=0):
+    tr, _, _ = util.read_data(use_mask=True, test_percentage=0.0, dataset=dataset)
+    
+    flat_indices = np.where(tr != 0)
+    data_size = len(flat_indices[0])
+    fold_size = int(data_size * valid_size)
+
+    ts_scores = []
+    for i in range(k):
+        test_indices = np.random.choice(range(data_size), fold_size, replace=False)
+        test_2D_indices = (flat_indices[0][test_indices], flat_indices[1][test_indices])
+        test_mask = np.zeros(tr.shape, dtype=bool)
+        test_mask[test_2D_indices] = True # true if test
+
+        test_fold = np.multiply(tr, test_mask)
+        train_fold = np.multiply(tr, ~test_mask)
+        tf.reset_default_graph()
+        (cost, trerr, tserr) = train_autoencoder(sett, train_fold, test_fold, data_axis, make_predictions=False, dataset="CF")
+        ts_scores.append(tserr)
+
+    print("%s Mean %d-fold CV score: %f +- %f" % (util.get_time(), k, np.mean(ts_scores), np.std(ts_scores)))
+
+# Item DAE: 0.986030
+# User DAE: 0.992433
+
+def train_autoencoder(sett, tr, ts, data_axis=0, make_predictions=False, dataset="CF"):
     """Train the denosing autoencoder for CF
     @param sett: dictionary of settings
     @param data_axis: whether to train a U-autoencoder (for users, data_axis=0)
@@ -68,14 +95,7 @@ def train_autoencoder(sett, data_axis=0, make_predictions=False, dataset="CF"):
     else:
         train_size = sett["nitems"]
         feature_size = sett["nusers"]
-    if make_predictions:
-        if dataset != "CF":
-            raise ValueError("%s Cannot make predictions with dataset %s" % (util.get_time(), dataset))
-        tr, _, ts = util.read_data(use_mask=True, dataset=dataset)
-    else:
-        tr, ts, msk = util.read_data(use_mask=False, test_percentage=0.1, dataset=dataset)
 
-    print("%s Read data from dataset %s" % (util.get_time(), dataset))
     tr, m_tr = prepare_data(tr, data_axis)
     ts, m_ts = prepare_data(ts, data_axis)
     if (data_axis == 1):
@@ -172,21 +192,23 @@ if __name__ == "__main__":
     print("%s Autoencoder Started" % (util.get_time()))
     dataset = "CF"
 
+    # These settings give value (with axis 1): 0.990034 
+    # (with axis 0): 0.985788
     settings = {
         "nusers" : 10000,
         "nitems" : 1000,
         "batch_size": 10,
-        "num_epochs": 30,
+        "num_epochs": 40,
         "report_every": 500,
         
         "hidden_size": 20,
-        "learning_rate": 0.004,
+        "learning_rate": 0.001,
         "learning_rate_decay": 0.9,
-        "dropout_prob": 0.2,
+        "dropout_prob": 0.3,
         "gaussian_prob": 0.0,
         "gaussian_std": 0.08,
         "sap_prob": 0.01, # normally = 0.03-0.05
-        "alpha": 1., # normally a=0.9,b=0.2;a=1,b=0.1 works better(ts=0.982);a=1.2,ts=0.981;
+        "alpha": 1.2, # normally a=0.9,b=0.2;a=1,b=0.1 works better(ts=0.982);a=1.2,ts=0.981;
         "beta": 0.1,  # beta << alpha otherwise a lot of overfitting occurs
         "regularization": 0.1,
 
@@ -194,17 +216,22 @@ if __name__ == "__main__":
         "prediction_file": "./saved_data/autoencoder_predict.csv",
     }
 
-    if dataset == "CF":
-        train_autoencoder(settings, data_axis=0, make_predictions=False, dataset="CF")
-    elif dataset == "movielens":
-        settings["nusers"] = 6040
-        settings["nitems"] = 3952
-        train_autoencoder(settings, data_axis=0, make_predictions=False, dataset="movielens")
+    # if dataset == "CF":
+        # cross_val_score(3, settings, 0.1, data_axis=0)
+        # cross_val_score(3, settings, 0.1, data_axis=1)
+    # elif dataset == "movielens":
+        # settings["nusers"] = 6040
+        # settings["nitems"] = 3952
+        # train_autoencoder(settings, data_axis=0, make_predictions=False, dataset="movielens")
 
     ## This creates 2 predictors
-    # settings["prediction_file"] = "./saved_data/autoenc_ax1_pred"
-    # train_autoencoder(settings, data_axis=1, make_predictions=True)
+    tr, _, ts = util.read_data(use_mask=True, dataset=dataset)
+    print("%s Read data from dataset %s" % (util.get_time(), dataset))
     
-    # settings["prediction_file"] = "./saved_data/autoenc_ax0_pred"
-    # train_autoencoder(settings, data_axis=0, make_predictions=True)
+    settings["prediction_file"] = "./saved_data/autoenc_ax0_pred"
+    train_autoencoder(settings, tr, ts, data_axis=0, make_predictions=True, dataset="CF")
 
+    tf.reset_default_graph()
+    settings["hidden_size"] = 60
+    settings["prediction_file"] = "./saved_data/autoenc_ax1_pred"
+    train_autoencoder(settings, tr, ts, data_axis=1, make_predictions=True, dataset="CF")
