@@ -690,13 +690,13 @@ bool reccommend::NeighbourhoodSolver::predictUpdate (int u, int i) {
     // Update m_w
     for (size_t a = inv_kmax_expl; a < explicitU.size(); a++) {
         m_w(i, explicitU[a]) += getSetting("lrate3") *
-            (err * n_expl * m_bias_offset(u, explicitU[a]) - getSetting("regl4") * m_w(i, explicitU[a]));
+            (err * n_expl * m_bias_offset(u, explicitU[a]) - getSetting("regl8") * m_w(i, explicitU[a]));
     }
     // Update m_c
     if (USE_IMPLICIT) {
         for (size_t a = inv_kmax_impl; a < implicitU.size(); a++) {
             m_c(i, implicitU[a]) += getSetting("lrate3") *
-                (err * n_impl - getSetting("regl4") * m_c(i, implicitU[a]));
+                (err * n_impl - getSetting("regl8") * m_c(i, implicitU[a]));
         }
     }
     return true;

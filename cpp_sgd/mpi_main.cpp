@@ -366,10 +366,6 @@ SettingsRange getIntegratedConfig (const int num_threads) {
     lrate3_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.03));
     min_max_config["lrate3"] = lrate3_choice;
     
-    config_var regl4_choice;
-    regl4_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
-    min_max_config["regl4"] = regl4_choice;
-    
     config_var regl6_choice;
     regl6_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
     min_max_config["regl6"] = regl6_choice;
@@ -436,9 +432,9 @@ SettingsRange getNeighbourSpearmanConfig (const int num_threads) {
     lrate3_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.1));
     min_max_config["lrate3"] = lrate3_choice;
 
-    config_var regl4_choice;
-    regl4_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
-    min_max_config["regl4"] = regl4_choice;
+    config_var regl8_choice;
+    regl8_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl8"] = regl8_choice;
 
     config_var regl6_choice;
     regl6_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
@@ -497,9 +493,9 @@ SettingsRange getNeighbourPearsonConfig (const int num_threads) {
     lrate3_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.1));
     min_max_config["lrate3"] = lrate3_choice;
 
-    config_var regl4_choice;
-    regl4_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
-    min_max_config["regl4"] = regl4_choice;
+    config_var regl8_choice;
+    regl8_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
+    min_max_config["regl8"] = regl8_choice;
 
     config_var regl6_choice;
     regl6_choice.set<pair<dtype, dtype> >(pair<dtype, dtype>(0.001, 0.3));
